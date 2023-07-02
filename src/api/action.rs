@@ -13,7 +13,7 @@ use super::{
   User,
 };
 
-pub async fn action_agent_update(
+pub async fn update(
   Path(agent_type): Path<String>,
   User(user): User,
   State(state): State<AppState>,
@@ -24,7 +24,7 @@ pub async fn action_agent_update(
   // find the specified agent
   let agent = actions
     .get(agent_type.as_str())
-    .ok_or_else(|| Error::InvalidAgent(agent_type.clone()))?;
+    .ok_or_else(|| Error::InvalidParameter("agent_type", agent_type.clone()))?;
   log::debug!(
     "incoming [{}] action update request: [{:?}]",
     agent_type,

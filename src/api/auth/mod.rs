@@ -41,7 +41,7 @@ pub trait AuthAgent: Send + Sync {
   async fn oauth2(&self, request: &AuthRequest) -> Result<AuthUserInfo>;
 }
 
-pub async fn auth_agent(
+pub async fn oauth2(
   Path(agent_type): Path<String>,
   State(state): State<AppState>,
   Json(request): Json<AuthRequest>,
@@ -57,7 +57,7 @@ pub async fn auth_agent(
   // find the specified agent
   let agent = auths
     .get(agent_type.as_str())
-    .ok_or_else(|| Error::InvalidAgent(agent_type.clone()))?;
+    .ok_or_else(|| Error::InvalidParameter("agent_type", agent_type.clone()))?;
   log::debug!("incoming auth request: [{:?}]", request);
 
   // send oauth2 request to auth server

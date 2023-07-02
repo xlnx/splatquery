@@ -1,6 +1,3 @@
-pub mod pvp;
-pub mod user;
-
 use std::{ops::Deref, path::Path};
 
 use r2d2::Pool;
@@ -8,6 +5,10 @@ use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::Connection;
 
 use crate::errors::Result;
+
+pub mod pvp;
+pub mod query;
+pub mod user;
 
 #[derive(Clone)]
 pub struct Database(Pool<SqliteConnectionManager>);

@@ -21,11 +21,11 @@ impl WebPushActionAgentConfig {
   pub fn collect(self) -> Result<WebPushActionAgent> {
     let file = File::open(&self.private_pem_path).map_err(|err| {
       log::error!("{:?}", err);
-      Error::InvalidConfig("invalid webpush private pem file".into())
+      Error::InvalidParameter("webpush::private_pem", self.private_pem_path.clone())
     })?;
     let vapid = VapidSignatureBuilder::from_pem_no_sub(file).map_err(|err| {
       log::error!("{:?}", err);
-      Error::InvalidConfig("invalid webpush private key".into())
+      Error::InvalidParameter("webpush::private_pem", self.private_pem_path.clone())
     })?;
     let client = WebPushClient::new().map_err(|err| {
       log::error!("{:?}", err);

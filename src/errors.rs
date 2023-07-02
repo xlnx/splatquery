@@ -23,11 +23,8 @@ pub enum Error {
   #[error("jwt error")]
   JwtError(#[from] jsonwebtoken::errors::Error),
 
-  #[error("invalid agent")]
-  InvalidAgent(String),
-
-  #[error("invalid config")]
-  InvalidConfig(String),
+  #[error("invalid parameter")]
+  InvalidParameter(&'static str, String),
 
   #[cfg(feature = "api")]
   #[error("unauthorized")]
@@ -77,12 +74,8 @@ impl IntoResponse for Error {
           }
         }
       }
-      Self::InvalidAgent(agent) => {
-        log::info!("invalid agent: [{}]", agent);
-        StatusCode::BAD_REQUEST
-      }
-      Self::InvalidConfig(config) => {
-        log::info!("invalid config: [{}]", config);
+      Self::InvalidParameter(param, value) => {
+        log::info!("invalid parameter `{}`: [{}]", param, value);
         StatusCode::BAD_REQUEST
       }
       Self::Unauthorized => {

@@ -58,10 +58,11 @@ async fn main() -> Result<(), BoxError> {
 
   // prepare splatnet agent
   let splatnet = SplatNet::new(db.clone(), actions.clone(), config.splatnet);
-  tokio::spawn(splatnet.watch());
+  tokio::spawn(splatnet.clone().watch());
 
   // make app state
   let state = AppState(Arc::new(InnerAppState {
+    splatnet,
     db,
     jwt,
     auths,
@@ -71,11 +72,9 @@ async fn main() -> Result<(), BoxError> {
 
   let app = Router::new()
     .route("/status", get(|| async { Json(json!({"status": "ok"})) }))
-    .route(
-      "/action/:agent/update",
-      post(api::action::action_agent_update),
-    )
-    .route("/auth/:agent", post(api::auth::auth_agent))
+    .route("/action/:agent/update", post(api::action::update))
+    .route("/query/new", post(api::query::create))
+    .route("/auth/:agent", post(api::auth::oauth2))
     .with_state(state);
 
   // add cors layer to the top

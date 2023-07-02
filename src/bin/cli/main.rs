@@ -1,11 +1,11 @@
-mod config;
+use std::{collections::HashMap, fs::File, io::BufReader, sync::Arc};
 
-use std::{fs::File, io::BufReader, sync::Arc};
-
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use splatquery::{
-  action::infolog::InfoLogActionAgent,
+  action::{config::ActionAgentsConfig, infolog::InfoLogActionAgent},
   database::{
-    pvp::{CreatePVPQuery, CreatePVPQueryRequest},
+    query::{CreateQuery, CreateQueryRequest, QueryConfig},
     user::{
       CreateUser, CreateUserRequest, LookupUser, LookupUserRequest, UpdateUserAction,
       UpdateUserActionRequest,
@@ -13,10 +13,19 @@ use splatquery::{
     Database,
   },
   errors::BoxError,
-  splatnet::SplatNet,
+  splatnet::{SplatNet, SplatNetConfig},
 };
 
-use crate::config::{Config, QueryConfig};
+#[derive(Serialize, Deserialize)]
+pub struct Config {
+  #[serde(default)]
+  pub splatnet: SplatNetConfig,
+  #[serde(default)]
+  pub agents: ActionAgentsConfig,
+  pub actions: HashMap<String, Value>,
+  #[serde(default)]
+  pub queries: Vec<QueryConfig>,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), BoxError> {
@@ -38,16 +47,16 @@ async fn main() -> Result<(), BoxError> {
   let config: Config = serde_json::from_reader(reader)?;
 
   // prepare action agents
-  let mut actions = config.agents.collect()?;
-  actions.insert("infolog", Arc::new(InfoLogActionAgent()));
-  log::debug!("agents = {:?}", actions);
+  let mut agents = config.agents.collect()?;
+  agents.insert("infolog", Arc::new(InfoLogActionAgent()));
+  log::debug!("agents = {:?}", agents);
 
   // prepare database agent
   let db = Database::new_in_memory()?;
   let mut conn = db.get()?;
 
   // prepare splatnet agent
-  let splatnet = SplatNet::new(db.clone(), Arc::new(actions), config.splatnet);
+  let splatnet = SplatNet::new(db.clone(), Arc::new(agents), config.splatnet);
 
   // prepare user
   let auth_agent = "";
@@ -81,32 +90,11 @@ async fn main() -> Result<(), BoxError> {
   for query in config.queries.into_iter() {
     let splatnet = splatnet.clone();
     let tx = conn.transaction()?;
-    match query {
-      QueryConfig::PVP {
-        modes,
-        rules,
-        stages,
-      } => {
-        for rule in rules.iter() {
-          let incl = stages
-            .includes
-            .iter()
-            .map(|stage| splatnet.get_stage_id(&stage));
-          let incl: Vec<_> = itertools::process_results(incl, |iter| iter.collect())?;
-          let excl = stages
-            .excludes
-            .iter()
-            .map(|stage| splatnet.get_stage_id(&stage));
-          let excl: Vec<_> = itertools::process_results(excl, |iter| iter.collect())?;
-          let qid = tx.create_pvp_query(&CreatePVPQueryRequest {
-            uid,
-            modes: &modes,
-            rules: &[(*rule, &incl, &excl)],
-          })?;
-          log::debug!("new query qid=[{}]", qid);
-        }
-      }
-    }
+    tx.create_query(&CreateQueryRequest {
+      uid,
+      splatnet: splatnet.as_ref(),
+      query: &query,
+    })?;
     tx.commit()?;
   }
 

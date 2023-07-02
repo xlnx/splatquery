@@ -10,6 +10,7 @@ pub mod action;
 pub mod auth;
 pub mod config;
 pub mod jwt;
+pub mod query;
 pub mod state;
 
 #[derive(Serialize, Deserialize)]
