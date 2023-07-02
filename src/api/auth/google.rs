@@ -1,7 +1,7 @@
 use axum::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::errors::{Error, Result};
+use crate::{Error, Result};
 
 use super::{AuthAgent, AuthRequest, AuthUserInfo};
 

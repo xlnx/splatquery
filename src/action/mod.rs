@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
 use serde_json::Value;
 
-use crate::errors::Result;
+use crate::Result;
 
 pub mod config;
 pub mod infolog;

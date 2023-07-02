@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
-use crate::errors::Result;
+use crate::Result;
 
 use super::ActionAgentMap;
 

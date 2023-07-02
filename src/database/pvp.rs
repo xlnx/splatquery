@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use rusqlite::{Connection, Transaction};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 
-use crate::{errors::Result, splatnet::PVPMode};
+use crate::{splatnet::PVPMode, Result};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str)]
 #[serde(rename_all = "lowercase")]

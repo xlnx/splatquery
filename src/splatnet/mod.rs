@@ -14,7 +14,7 @@ use crate::{
     pvp::{LookupPVP, LookupPVPRequest, Rule},
     Database,
   },
-  errors::BoxError,
+  BoxError,
 };
 
 use self::spider::{CoopSpiderItem, GearSpiderItem, PVPSpiderItem, Spider};

@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 
-use crate::errors::BoxError;
+use crate::BoxError;
 
 use super::{
   gear,

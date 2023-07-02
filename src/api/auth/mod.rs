@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
   api::UserInfo,
   database::user::{CreateUser, CreateUserRequest},
-  errors::{Error, Result},
+  Error, Result,
 };
 
 use super::state::{AppState, InnerAppState};

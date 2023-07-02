@@ -12,8 +12,8 @@ use splatquery::{
     },
     Database,
   },
-  errors::BoxError,
   splatnet::{SplatNet, SplatNetConfig},
+  BoxError,
 };
 
 #[derive(Serialize, Deserialize)]

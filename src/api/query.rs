@@ -5,7 +5,7 @@ use crate::{
     query::{CreateQuery, CreateQueryRequest, QueryConfig},
     user::{LookupUser, LookupUserRequest},
   },
-  errors::Result,
+  Result,
 };
 
 use super::{

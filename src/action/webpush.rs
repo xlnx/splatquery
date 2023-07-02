@@ -8,7 +8,7 @@ use web_push::{
   WebPushClient, WebPushMessageBuilder,
 };
 
-use crate::errors::{Error, Result};
+use crate::{Error, Result};
 
 use super::{Action, ActionAgent};
 

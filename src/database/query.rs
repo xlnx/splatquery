@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
   database::pvp::{CreatePVPQueryRequest, Rule},
-  errors::{Error, Result},
   splatnet::{PVPMode, SplatNet},
+  Error, Result,
 };
 
 use super::pvp::CreatePVPQuery;

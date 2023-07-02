@@ -18,8 +18,8 @@ use splatquery::{
     state::{AppState, InnerAppState},
   },
   database::Database,
-  errors::{BoxError, Result},
   splatnet::SplatNet,
+  BoxError, Result,
 };
 
 #[tokio::main]

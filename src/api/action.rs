@@ -5,7 +5,7 @@ use axum::{
 
 use crate::{
   database::user::{LookupUser, LookupUserRequest, UpdateUserAction, UpdateUserActionRequest},
-  errors::{Error, Result},
+  Error, Result,
 };
 
 use super::{

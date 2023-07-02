@@ -3,7 +3,7 @@ use std::sync::Arc;
 use jsonwebtoken::Algorithm;
 use serde::{Deserialize, Serialize};
 
-use crate::{action::config::ActionAgentsConfig, errors::Result, splatnet::SplatNetConfig};
+use crate::{action::config::ActionAgentsConfig, splatnet::SplatNetConfig, Result};
 
 use super::auth::AuthAgentMap;
 

@@ -11,7 +11,7 @@ name = "server"
 required-features = ["api"]
 
 [features]
-default = ["webpush", "api"]
+default = ["webpush"]
 api = [
   "dep:axum",
   "dep:axum-auth",
