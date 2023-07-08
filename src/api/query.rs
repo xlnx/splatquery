@@ -4,10 +4,14 @@ use axum::{
   Json,
 };
 use serde::Deserialize;
+use serde_json::json;
 
 use crate::{
   database::{
-    query::{CreateQuery, CreateQueryRequest, ListQuery, ListQueryRequest, QueryConfig},
+    query::{
+      CreateQuery, CreateQueryRequest, DeleteQuery, DeleteQueryRequest, ListQuery,
+      ListQueryRequest, QueryConfig, QueryType, UpdateQuery, UpdateQueryRequest,
+    },
     user::{LookupUser, LookupUserRequest},
   },
   Error, Result,
@@ -25,33 +29,25 @@ pub async fn create(
 ) -> Result<impl IntoResponse> {
   let InnerAppState { db, .. } = state.0.as_ref();
 
-  let mut conn = db.get()?;
-  let tx = conn.transaction()?;
+  let conn = db.get()?;
 
   // find the specified user
-  let uid = tx.lookup_user(LookupUserRequest {
+  let uid = conn.lookup_user(LookupUserRequest {
     auth_agent: &user.agent,
     auth_uid: &user.auth.id,
   })?;
 
   // create query
-  let qid = tx.create_query(CreateQueryRequest {
+  let qid = conn.create_query(CreateQueryRequest {
     uid,
     config: &config,
   })?;
-  tx.commit()?;
 
   // note if create succeed
   log::debug!("created query [{}] for: [{}]", qid, uid);
-  Ok(())
-}
-
-#[derive(Deserialize, PartialEq, Eq, Clone, Copy)]
-#[serde(rename_all = "lowercase")]
-pub enum QueryType {
-  PVP,
-  Coop,
-  Gears,
+  let resp = serde_json::to_string(&json!({ "qid": qid }))
+    .map_err(|err| Error::InternalServerError(Box::new(err)))?;
+  Ok(resp)
 }
 
 #[derive(Deserialize)]
@@ -68,11 +64,10 @@ pub async fn list(
   let InnerAppState { db, .. } = state.0.as_ref();
   let ListRequest { qid, qtype } = request;
 
-  let mut conn = db.get()?;
-  let tx = conn.transaction()?;
+  let conn = db.get()?;
 
   // find the specified user
-  let uid = tx.lookup_user(LookupUserRequest {
+  let uid = conn.lookup_user(LookupUserRequest {
     auth_agent: &user.agent,
     auth_uid: &user.auth.id,
   })?;
@@ -81,9 +76,67 @@ pub async fn list(
   let mut li = Vec::new();
 
   if qtype.is_none() || qtype.unwrap() == QueryType::PVP {
-    li.append(&mut tx.list_query(ListQueryRequest { uid, qid })?);
+    li.append(&mut conn.list_query(ListQueryRequest { uid, qid })?);
   }
 
   let resp = serde_json::to_string(&li).map_err(|err| Error::InternalServerError(Box::new(err)))?;
   Ok(resp)
+}
+
+#[derive(Deserialize)]
+pub struct UpdateRequest {
+  pub qid: i64,
+}
+
+pub async fn update(
+  User(user): User,
+  State(state): State<AppState>,
+  Query(request): Query<UpdateRequest>,
+  Json(config): Json<QueryConfig>,
+) -> Result<()> {
+  let InnerAppState { db, .. } = state.0.as_ref();
+  let UpdateRequest { qid } = request;
+
+  let conn = db.get()?;
+
+  // find the specified user
+  let uid = conn.lookup_user(LookupUserRequest {
+    auth_agent: &user.agent,
+    auth_uid: &user.auth.id,
+  })?;
+
+  conn.update_query(UpdateQueryRequest {
+    uid,
+    qid,
+    config: &config,
+  })?;
+
+  Ok(())
+}
+
+#[derive(Deserialize)]
+pub struct DeleteRequest {
+  pub qid: i64,
+  pub qtype: QueryType,
+}
+
+pub async fn delete(
+  User(user): User,
+  State(state): State<AppState>,
+  Query(request): Query<DeleteRequest>,
+) -> Result<()> {
+  let InnerAppState { db, .. } = state.0.as_ref();
+  let DeleteRequest { qid, qtype } = request;
+
+  let conn = db.get()?;
+
+  // find the specified user
+  let uid = conn.lookup_user(LookupUserRequest {
+    auth_agent: &user.agent,
+    auth_uid: &user.auth.id,
+  })?;
+
+  conn.delete_query(DeleteQueryRequest { uid, qid, qtype })?;
+
+  Ok(())
 }

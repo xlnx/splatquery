@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use rusqlite::Connection;
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 
-use crate::{splatnet::PVPMode, Result};
+use crate::{splatnet::PVPMode, Error, Result};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str)]
 #[serde(rename_all = "lowercase")]
@@ -84,6 +84,27 @@ pub trait ListPVPQuery {
   ) -> Result<AppendList<(i64, PVPQueryRecord)>>;
 }
 
+#[derive(Debug)]
+pub struct UpdatePVPQueryRequest<'a> {
+  pub uid: i64,
+  pub qid: i64,
+  pub record: &'a PVPQueryRecord,
+}
+
+pub trait UpdatePVPQuery {
+  fn update_pvp_query(&self, request: UpdatePVPQueryRequest) -> Result<()>;
+}
+
+#[derive(Debug)]
+pub struct DeletePVPQueryRequest {
+  pub uid: i64,
+  pub qid: i64,
+}
+
+pub trait DeletePVPQuery {
+  fn delete_pvp_query(&self, request: DeletePVPQueryRequest) -> Result<()>;
+}
+
 impl CreatePVPQuery for Connection {
   fn create_pvp_query(&self, request: CreatePVPQueryRequest) -> Result<i64> {
     let CreatePVPQueryRequest {
@@ -102,8 +123,12 @@ impl CreatePVPQuery for Connection {
       VALUES ( ?1, ?2, ?3, ?4, ?5 )
       ",
     )?;
-    stmt.execute((&uid, &modes, &rules, &includes, &excludes))?;
-    Ok(self.last_insert_rowid())
+    let n = stmt.execute((&uid, &modes, &rules, &includes, &excludes))?;
+    if n != 1 {
+      Err(Error::SqliteError(rusqlite::Error::QueryReturnedNoRows))
+    } else {
+      Ok(self.last_insert_rowid())
+    }
   }
 }
 
@@ -150,7 +175,9 @@ impl ListPVPQuery for Connection {
       "
     .into();
     if request.qid.is_some() {
-      sql += " AND qid = ?2";
+      sql += " AND id = ?2";
+    } else {
+      sql += " AND (1 OR ?2)";
     }
     let mut stmt = self.prepare_cached(&sql)?;
     let iter = stmt.query_map((&request.uid, &request.qid), |row| {
@@ -169,11 +196,60 @@ impl ListPVPQuery for Connection {
   }
 }
 
+impl UpdatePVPQuery for Connection {
+  fn update_pvp_query(&self, request: UpdatePVPQueryRequest) -> Result<()> {
+    let UpdatePVPQueryRequest {
+      uid,
+      qid,
+      record:
+        PVPQueryRecord {
+          modes,
+          rules,
+          includes,
+          excludes,
+        },
+    } = request;
+    let mut stmt = self.prepare_cached(
+      "
+      UPDATE pvp_queries
+      SET modes = ?3, rules = ?4, includes = ?5, excludes = ?6
+      WHERE uid = ?1 AND id = ?2
+      ",
+    )?;
+    let n = stmt.execute((&uid, &qid, &modes, &rules, &includes, &excludes))?;
+    if n != 1 {
+      Err(Error::SqliteError(rusqlite::Error::QueryReturnedNoRows))
+    } else {
+      Ok(())
+    }
+  }
+}
+
+impl DeletePVPQuery for Connection {
+  fn delete_pvp_query(&self, request: DeletePVPQueryRequest) -> Result<()> {
+    let DeletePVPQueryRequest { uid, qid } = request;
+    let mut stmt = self.prepare_cached(
+      "
+      DELETE FROM pvp_queries
+      WHERE uid = ?1 AND id = ?2",
+    )?;
+    let n = stmt.execute((&uid, &qid))?;
+    if n != 1 {
+      Err(Error::SqliteError(rusqlite::Error::QueryReturnedNoRows))
+    } else {
+      Ok(())
+    }
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use crate::{
     database::{
-      query::{CreateQuery, CreateQueryRequest, PVPQueryConfig, QueryConfig},
+      query::{
+        CreateQuery, CreateQueryRequest, PVPQueryConfig, QueryConfig, UpdateQuery,
+        UpdateQueryRequest,
+      },
       user::{
         CreateUser, CreateUserRequest, LookupUser, LookupUserRequest, UpdateUserAction,
         UpdateUserActionRequest,
@@ -324,6 +400,33 @@ mod tests {
       })
       .unwrap();
     // all neutral
+    assert_eq!(li.len(), 0);
+
+    let tx = conn.transaction().unwrap();
+    tx.update_query(UpdateQueryRequest {
+      uid,
+      qid,
+      config: &QueryConfig::PVP {
+        config: PVPQueryConfig {
+          modes: vec![PVPMode::Open, PVPMode::X],
+          rules: vec![Rule::Asari],
+          includes: vec![10],
+          excludes: vec![1, 2],
+        },
+      },
+    })
+    .unwrap();
+    tx.commit().unwrap();
+
+    let li = conn
+      .lookup_pvp(LookupPVPRequest {
+        start_time: Utc::now(),
+        rule: Rule::Asari,
+        mode: PVPMode::X,
+        stages: &[1, 2],
+      })
+      .unwrap();
+    // updated
     assert_eq!(li.len(), 0);
   }
 }

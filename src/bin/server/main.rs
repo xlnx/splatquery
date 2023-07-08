@@ -69,6 +69,8 @@ async fn main() -> Result<(), BoxError> {
     .route("/action/:agent/update", post(api::action::update))
     .route("/query/new", post(api::query::create))
     .route("/query/list", get(api::query::list))
+    .route("/query/update", post(api::query::update))
+    .route("/query/delete", post(api::query::delete))
     .route("/auth/:agent", post(api::auth::oauth2))
     .with_state(state);
 

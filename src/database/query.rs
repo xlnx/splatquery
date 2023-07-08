@@ -1,5 +1,6 @@
-use rusqlite::Transaction;
+use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
+use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 
 use crate::{
   database::pvp::{CreatePVPQueryRequest, Rule},
@@ -7,7 +8,18 @@ use crate::{
   Error, Result,
 };
 
-use super::pvp::{CreatePVPQuery, ListPVPQuery, ListPVPQueryRequest, PVPQueryRecord};
+use super::pvp::{
+  CreatePVPQuery, DeletePVPQuery, DeletePVPQueryRequest, ListPVPQuery, ListPVPQueryRequest,
+  PVPQueryRecord, UpdatePVPQuery, UpdatePVPQueryRequest,
+};
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str)]
+#[serde(rename_all = "lowercase")]
+pub enum QueryType {
+  PVP,
+  Coop,
+  Gears,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct PVPQueryConfig {
@@ -147,7 +159,27 @@ pub trait ListQuery {
   fn list_query(&self, request: ListQueryRequest) -> Result<Vec<ListQueryResponse>>;
 }
 
-impl<'a> CreateQuery for Transaction<'a> {
+pub struct UpdateQueryRequest<'a> {
+  pub uid: i64,
+  pub qid: i64,
+  pub config: &'a QueryConfig,
+}
+
+pub trait UpdateQuery {
+  fn update_query(&self, request: UpdateQueryRequest) -> Result<()>;
+}
+
+pub struct DeleteQueryRequest {
+  pub uid: i64,
+  pub qid: i64,
+  pub qtype: QueryType,
+}
+
+pub trait DeleteQuery {
+  fn delete_query(&self, request: DeleteQueryRequest) -> Result<()>;
+}
+
+impl CreateQuery for Connection {
   fn create_query(&self, request: CreateQueryRequest) -> Result<i64> {
     let CreateQueryRequest { uid, config } = request;
     match config {
@@ -162,7 +194,7 @@ impl<'a> CreateQuery for Transaction<'a> {
   }
 }
 
-impl<'a> ListQuery for Transaction<'a> {
+impl ListQuery for Connection {
   fn list_query(&self, request: ListQueryRequest) -> Result<Vec<ListQueryResponse>> {
     let ListQueryRequest { uid, qid } = request;
     let li = self.list_pvp_query(ListPVPQueryRequest { uid, qid })?;
@@ -174,5 +206,31 @@ impl<'a> ListQuery for Transaction<'a> {
     });
     let li = iter.collect();
     Ok(li)
+  }
+}
+
+impl UpdateQuery for Connection {
+  fn update_query(&self, request: UpdateQueryRequest) -> Result<()> {
+    let UpdateQueryRequest { uid, qid, config } = request;
+    match config {
+      QueryConfig::PVP { config } => {
+        let record = &config.try_into()?;
+        self.update_pvp_query(UpdatePVPQueryRequest { uid, qid, record })?;
+        Ok(())
+      }
+    }
+  }
+}
+
+impl DeleteQuery for Connection {
+  fn delete_query(&self, request: DeleteQueryRequest) -> Result<()> {
+    let DeleteQueryRequest { uid, qid, qtype } = request;
+    match qtype {
+      QueryType::PVP => {
+        self.delete_pvp_query(DeletePVPQueryRequest { uid, qid })?;
+        Ok(())
+      }
+      _ => Err(Error::InvalidParameter("qtype", qtype.to_string())),
+    }
   }
 }
