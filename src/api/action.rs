@@ -37,7 +37,7 @@ pub async fn update(
   let tx = conn.transaction()?;
   let uid = tx.lookup_user(LookupUserRequest {
     auth_agent: &user.agent,
-    auth_uid: &user.auth.id,
+    auth_uid: &user.id,
   })?;
   tx.update_user_action(UpdateUserActionRequest {
     uid,

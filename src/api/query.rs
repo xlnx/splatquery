@@ -34,7 +34,7 @@ pub async fn create(
   // find the specified user
   let uid = conn.lookup_user(LookupUserRequest {
     auth_agent: &user.agent,
-    auth_uid: &user.auth.id,
+    auth_uid: &user.id,
   })?;
 
   // create query
@@ -69,7 +69,7 @@ pub async fn list(
   // find the specified user
   let uid = conn.lookup_user(LookupUserRequest {
     auth_agent: &user.agent,
-    auth_uid: &user.auth.id,
+    auth_uid: &user.id,
   })?;
 
   // if let Some(query) = request.query;
@@ -102,7 +102,7 @@ pub async fn update(
   // find the specified user
   let uid = conn.lookup_user(LookupUserRequest {
     auth_agent: &user.agent,
-    auth_uid: &user.auth.id,
+    auth_uid: &user.id,
   })?;
 
   conn.update_query(UpdateQueryRequest {
@@ -133,7 +133,7 @@ pub async fn delete(
   // find the specified user
   let uid = conn.lookup_user(LookupUserRequest {
     auth_agent: &user.agent,
-    auth_uid: &user.auth.id,
+    auth_uid: &user.id,
   })?;
 
   conn.delete_query(DeleteQueryRequest { uid, qid, qtype })?;

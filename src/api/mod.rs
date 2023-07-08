@@ -16,8 +16,7 @@ pub mod state;
 #[derive(Serialize, Deserialize)]
 pub struct UserInfo {
   pub agent: String,
-  #[serde(flatten)]
-  pub auth: auth::AuthUserInfo,
+  pub id: String,
 }
 
 pub struct User(pub UserInfo);

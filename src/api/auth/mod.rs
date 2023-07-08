@@ -8,6 +8,7 @@ use axum::{
 };
 use http::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 use crate::{
   api::UserInfo,
@@ -82,15 +83,21 @@ pub async fn oauth2(
   let jwt = jwt.encode(
     &UserInfo {
       agent: agent_type,
-      auth,
+      id: auth.id,
     },
     &auth_expiration,
   )?;
   log::debug!("signed auth request: [{:?}], jwt: [{}]", request, jwt);
 
-  // emit jwt
-  Ok(AppendHeaders([(
-    AUTHORIZATION,
-    String::from("Bearer ") + &jwt,
-  )]))
+  Ok((
+    // emit jwt
+    AppendHeaders([(AUTHORIZATION, String::from("Bearer ") + &jwt)]),
+    // emit userinfo
+    serde_json::to_string(&json!({
+      "name": auth.name,
+      "email": auth.email,
+      "picture": auth.picture,
+    }))
+    .map_err(|err| Error::InternalServerError(Box::new(err)))?,
+  ))
 }
