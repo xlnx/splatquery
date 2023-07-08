@@ -53,6 +53,7 @@ fn do_init(conn: &mut Connection) -> Result<(), rusqlite::Error> {
     pvp_queries (
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
       uid                 INTEGER NOT NULL,
+      created_time        DATETIME DEFAULT CURRENT_TIMESTAMP,
       modes               TINYINT NOT NULL,
       rules               TINYINT NOT NULL,
       includes            INT NOT NULL,

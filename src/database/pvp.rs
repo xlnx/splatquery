@@ -77,11 +77,14 @@ pub struct ListPVPQueryRequest {
   pub qid: Option<i64>,
 }
 
+pub struct ListPVPQueryResponse {
+  pub qid: i64,
+  pub record: PVPQueryRecord,
+  pub created_time: String,
+}
+
 pub trait ListPVPQuery {
-  fn list_pvp_query(
-    &self,
-    request: ListPVPQueryRequest,
-  ) -> Result<AppendList<(i64, PVPQueryRecord)>>;
+  fn list_pvp_query(&self, request: ListPVPQueryRequest) -> Result<Vec<ListPVPQueryResponse>>;
 }
 
 #[derive(Debug)]
@@ -164,12 +167,9 @@ impl LookupPVP for Connection {
 }
 
 impl ListPVPQuery for Connection {
-  fn list_pvp_query(
-    &self,
-    request: ListPVPQueryRequest,
-  ) -> Result<AppendList<(i64, PVPQueryRecord)>> {
+  fn list_pvp_query(&self, request: ListPVPQueryRequest) -> Result<Vec<ListPVPQueryResponse>> {
     let mut sql: String = "
-      SELECT id, modes, rules, includes, excludes
+      SELECT id, modes, rules, includes, excludes, created_time
       FROM pvp_queries
       WHERE uid = ?1
       "
@@ -181,15 +181,16 @@ impl ListPVPQuery for Connection {
     }
     let mut stmt = self.prepare_cached(&sql)?;
     let iter = stmt.query_map((&request.uid, &request.qid), |row| {
-      Ok((
-        row.get(0)?,
-        PVPQueryRecord {
+      Ok(ListPVPQueryResponse {
+        qid: row.get(0)?,
+        record: PVPQueryRecord {
           modes: row.get(1)?,
           rules: row.get(2)?,
           includes: row.get(3)?,
           excludes: row.get(4)?,
         },
-      ))
+        created_time: row.get(5)?,
+      })
     })?;
     let li = itertools::process_results(iter, |iter| iter.collect())?;
     Ok(li)

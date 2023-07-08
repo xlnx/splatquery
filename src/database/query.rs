@@ -153,6 +153,7 @@ pub struct ListQueryRequest {
 pub struct ListQueryResponse {
   pub qid: i64,
   pub config: QueryConfig,
+  pub created_time: String,
 }
 
 pub trait ListQuery {
@@ -198,11 +199,12 @@ impl ListQuery for Connection {
   fn list_query(&self, request: ListQueryRequest) -> Result<Vec<ListQueryResponse>> {
     let ListQueryRequest { uid, qid } = request;
     let li = self.list_pvp_query(ListPVPQueryRequest { uid, qid })?;
-    let iter = li.into_iter().map(|(qid, record)| ListQueryResponse {
-      qid: *qid,
+    let iter = li.into_iter().map(|e| ListQueryResponse {
+      qid: e.qid,
       config: QueryConfig::PVP {
-        config: record.into(),
+        config: (&e.record).into(),
       },
+      created_time: e.created_time,
     });
     let li = iter.collect();
     Ok(li)
