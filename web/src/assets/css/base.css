@@ -1,0 +1,136 @@
+@import url('./font.css');
+@import url('./multi-select.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #app {
+  @apply
+  m-0
+  h-full;
+}
+
+main {
+  @apply
+  min-h-full
+  max-h-fit;
+}
+
+.text-shadow {
+  text-shadow: 1px 1px 0 #000;
+}
+
+.fmt-focusable {
+  @apply
+  border-2 sm:border-3
+  border-gray-300 
+  dark:border-gray-600 
+  focus:border-blue-500 
+  dark:focus:border-blue-500 
+  focus:ring-blue-500 
+  dark:focus:ring-blue-500;
+}
+
+.fmt-form-input-base {
+  @apply
+  transition-colors
+  bg-gray-50 
+  dark:bg-gray-800 
+  disabled:bg-gray-200 
+  disabled:dark:bg-gray-700
+  text-gray-900 text-sm 
+  dark:text-white 
+  dark:placeholder-gray-400;
+}
+
+.fmt-form-input {
+  @apply 
+  rounded-lg 
+  block 
+  /* w-full  */
+  p-2.5 
+  fmt-form-input-base
+  fmt-focusable
+  !important;
+}
+
+.ts-control, .ts-control>input {
+  @apply
+  text-base sm:text-lg md:text-xl;
+}
+
+.ts-control {
+  @apply
+  rounded-lg 
+  border-2 sm:border-3
+  p-2;
+}
+
+.fmt-form-label {
+  @apply
+  block
+  mb-2
+  text-base sm:text-xl md:text-2xl
+  text-gray-900 dark:text-white;
+}
+
+.fmt-breadcrumb-item {
+  @apply
+  inline-flex items-center 
+  px-2 py-2 
+  text-sm sm:text-lg md:text-xl
+  text-gray-900 
+  dark:text-white
+  font-normal text-center 
+  rounded-lg 
+  select-none;
+}
+
+.fmt-breadcrumb-item.active {
+  @apply
+  bg-gray-50
+  dark:bg-gray-800 
+  disabled:bg-gray-200 
+  disabled:dark:bg-gray-700
+  fmt-focusable;
+}
+
+.fmt-button-base {
+  @apply
+  text-white 
+  font-medium 
+  rounded-lg 
+  text-lg sm:text-xl md:text-2xl
+  px-4 sm:px-8 py-1.5 sm:py-2.5;
+}
+
+.fmt-button {
+  @apply
+  fmt-button-base
+  bg-blue-700 hover:bg-blue-800 
+  dark:bg-blue-600 dark:hover:bg-blue-700 
+  focus:ring-4 focus:ring-blue-300 
+  focus:outline-none dark:focus:ring-blue-800;
+}
+
+.fmt-button-alert {
+  @apply
+  fmt-button-base
+  bg-red-700 hover:bg-red-800 
+  dark:bg-red-600 dark:hover:bg-red-700 
+  focus:ring-4 focus:ring-red-300 
+  focus:outline-none dark:focus:ring-red-800;
+}
+
+.fmt-dropdown-item {
+  @apply
+  block px-4 py-2 
+  hover:bg-gray-100 dark:hover:bg-gray-600 
+  dark:hover:text-white;
+}
+
+.multiselect.invalid .ts-control {
+  @apply
+  border-red-600 dark:border-red-500;
+}
