@@ -92,6 +92,8 @@ onMounted(async () => {
         throw response;
       }
       return response.data;
+    }, {
+      numOfAttempts: 5,
     });
     if (li.length != 1) {
       throw `li.length:[${li.length}] != [1]`;

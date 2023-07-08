@@ -7,7 +7,7 @@
           <span
             class="font-splatoon1 self-center text-2xl font-semibold whitespace-nowrap dark:text-white">SplatQuery</span>
         </a>
-        <div class="flex items-center md:order-2 space-x-2">
+        <div class="flex items-center md:order-2 space-x-4">
           <button
             class="inline-flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 w-10 h-10 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5"
             @click="toggleTheme">

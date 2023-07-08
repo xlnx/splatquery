@@ -25,7 +25,10 @@
         + New Query
       </a>
       <a type="button" class="fmt-button" href="query/list">
-        Query List
+        List Queries
+      </a>
+      <a type="button" class="fmt-button" href="action/list">
+        List Actions
       </a>
     </div>
   </div>

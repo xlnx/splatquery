@@ -2,8 +2,8 @@
   <div class="grid grid-flow-row-dense grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" v-if="queries">
     <div class="m-2 sm:m-3 lg:m-4">
       <Card href="/query/new" class="p-2">
-        <div class="border-4 border-gray-200 dark:border-gray-600 border-dashed rounded-xl w-full h-full flex">
-          <div class="m-auto text-3xl text-gray-900 dark:text-white">
+        <div class="py-2 border-4 border-gray-200 dark:border-gray-600 border-dashed rounded-xl w-full h-full flex">
+          <div class="m-auto font-bold text-2xl text-gray-900 dark:text-white">
             <span>+ New Query</span>
           </div>
         </div>
@@ -47,6 +47,8 @@ onMounted(async () => {
         throw response;
       }
       return response.data;
+    }, {
+      numOfAttempts: 5,
     });
   } catch (err) {
     console.error(err);
