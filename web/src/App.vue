@@ -24,7 +24,8 @@
             class="flex mr-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600">
             <span class="sr-only">Open user menu</span>
             <div class="relative w-10 h-10 overflow-hidden bg-gray-100 rounded-full dark:bg-gray-600">
-              <svg class="absolute w-12 h-12 text-gray-400 -left-1" fill="currentColor" viewBox="0 0 20 20"
+              <img v-if="user" :src="user.picture" />
+              <svg v-if="!user" class="absolute w-12 h-12 text-gray-400 -left-1" fill="currentColor" viewBox="0 0 20 20"
                 xmlns="http://www.w3.org/2000/svg">
                 <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd">
                 </path>
@@ -45,24 +46,36 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { initFlowbite } from 'flowbite'
+import { useAuth } from '@websanova/vue-auth/src/v3.js';
 
 onMounted(initFlowbite);
 
+const auth = useAuth();
+
 const theme = ref(localStorage.theme)
+const user = ref();
+
 const toggleTheme = () => {
-  localStorage.theme = theme.value = (theme.value != 'dark' ? 'dark' : 'light');
+  localStorage.theme = theme.value != 'dark' ? 'dark' : 'light';
   updateTheme();
 }
 
 const updateTheme = () => {
   if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    theme.value = 'dark';
     document.documentElement.classList.add('dark')
   } else {
+    theme.value = 'light';
     document.documentElement.classList.remove('dark')
   }
 }
 
 updateTheme();
+
+onMounted(() => {
+  const data = auth.remember();
+  user.value = data && JSON.parse(data);
+})
 </script>
 
 <style>

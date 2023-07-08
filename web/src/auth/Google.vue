@@ -8,11 +8,12 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { initFlowbite } from 'flowbite'
 import { useAuth } from '@websanova/vue-auth/src/v3.js';
 import Loading from '../components/Loading.vue';
+import ServerDown from '../components/ServerDown.vue';
 
 onMounted(initFlowbite);
 
@@ -22,7 +23,7 @@ const failed = ref();
 
 onMounted(async () => {
   try {
-    auth.oauth2('google', {
+    const { data } = await auth.oauth2('google', {
       url: 'https://api.1.koishi.top/auth/google',
       code: true,
       data: {
@@ -31,6 +32,8 @@ onMounted(async () => {
       },
       state: route.query.state,
     })
+    console.log(data);
+    auth.remember(JSON.stringify(data));
   } catch (err) {
     failed.value = true;
   }
