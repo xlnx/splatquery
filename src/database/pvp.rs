@@ -1,6 +1,6 @@
 use appendlist::AppendList;
 use chrono::{DateTime, Utc};
-use rusqlite::{Connection, Transaction};
+use rusqlite::Connection;
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 
 use crate::{splatnet::PVPMode, Result};
@@ -8,11 +8,11 @@ use crate::{splatnet::PVPMode, Result};
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str)]
 #[serde(rename_all = "lowercase")]
 pub enum Rule {
-  TurfWar = 0,
-  Area = 1,
-  Yagura = 2,
-  Hoko = 3,
-  Asari = 4,
+  TurfWar = 1,
+  Area = 2,
+  Yagura = 4,
+  Hoko = 8,
+  Asari = 16,
   Unknown = 255,
 }
 
@@ -34,14 +34,21 @@ fn fold_stage_mask(stages: &[u32]) -> u32 {
 }
 
 #[derive(Debug)]
+pub struct PVPQueryRecord {
+  pub modes: u8,
+  pub rules: u8,
+  pub includes: u32,
+  pub excludes: u32,
+}
+
+#[derive(Debug)]
 pub struct CreatePVPQueryRequest<'a> {
   pub uid: i64,
-  pub modes: &'a [PVPMode],
-  pub rules: &'a [(Rule, &'a [u32], &'a [u32])],
+  pub record: &'a PVPQueryRecord,
 }
 
 pub trait CreatePVPQuery {
-  fn create_pvp_query(&self, request: &CreatePVPQueryRequest) -> Result<i64>;
+  fn create_pvp_query(&self, request: CreatePVPQueryRequest) -> Result<i64>;
 }
 
 #[derive(Debug)]
@@ -61,65 +68,51 @@ pub struct LookupPVPResponse {
 }
 
 pub trait LookupPVP {
-  fn lookup_pvp(&self, request: &LookupPVPRequest) -> Result<AppendList<LookupPVPResponse>>;
+  fn lookup_pvp(&self, request: LookupPVPRequest) -> Result<AppendList<LookupPVPResponse>>;
 }
 
-impl<'a> CreatePVPQuery for Transaction<'a> {
-  fn create_pvp_query(&self, request: &CreatePVPQueryRequest) -> Result<i64> {
-    // insert rule predicates
-    let mut masks = [[0, 0]; 5];
-    for (rule, incl, excl) in request.rules.iter() {
-      masks[*rule as usize] = [*incl, *excl].map(fold_stage_mask);
-    }
+#[derive(Debug)]
+pub struct ListPVPQueryRequest {
+  pub uid: i64,
+  pub qid: Option<i64>,
+}
+
+pub trait ListPVPQuery {
+  fn list_pvp_query(
+    &self,
+    request: ListPVPQueryRequest,
+  ) -> Result<AppendList<(i64, PVPQueryRecord)>>;
+}
+
+impl CreatePVPQuery for Connection {
+  fn create_pvp_query(&self, request: CreatePVPQueryRequest) -> Result<i64> {
+    let CreatePVPQueryRequest {
+      uid,
+      record:
+        PVPQueryRecord {
+          modes,
+          rules,
+          includes,
+          excludes,
+        },
+    } = request;
     let mut stmt = self.prepare_cached(
       "
-      INSERT INTO pvp_queries 
-      ( uid, 
-        area_incl, area_excl, 
-        yagura_incl, yagura_excl, 
-        hoko_incl, hoko_excl, 
-        asari_incl, asari_excl )
-      VALUES 
-      (
-        ?1,
-        ?2, ?3,
-        ?4, ?5,
-        ?6, ?7,
-        ?8, ?9 )
+      INSERT INTO pvp_queries ( uid, modes, rules, includes, excludes )
+      VALUES ( ?1, ?2, ?3, ?4, ?5 )
       ",
     )?;
-    stmt.execute((
-      &request.uid,
-      &masks[Rule::Area as usize][0],
-      &masks[Rule::Area as usize][1],
-      &masks[Rule::Yagura as usize][0],
-      &masks[Rule::Yagura as usize][1],
-      &masks[Rule::Hoko as usize][0],
-      &masks[Rule::Hoko as usize][1],
-      &masks[Rule::Asari as usize][0],
-      &masks[Rule::Asari as usize][1],
-    ))?;
-    let qid = self.last_insert_rowid();
-    // insert mode predicates
-    let mut stmt = self.prepare_cached(
-      "
-      INSERT INTO pvp_query_modes ( mode, qid )
-      VALUES ( ?1, ?2 )
-      ",
-    )?;
-    for mode in request.modes.iter() {
-      stmt.execute((&(*mode as u8), &qid))?;
-    }
-    Ok(qid)
+    stmt.execute((&uid, &modes, &rules, &includes, &excludes))?;
+    Ok(self.last_insert_rowid())
   }
 }
 
 impl LookupPVP for Connection {
-  fn lookup_pvp(&self, request: &LookupPVPRequest) -> Result<AppendList<LookupPVPResponse>> {
+  fn lookup_pvp(&self, request: LookupPVPRequest) -> Result<AppendList<LookupPVPResponse>> {
     let mode = request.mode as u8;
-    let rule = request.rule.to_string();
+    let rule = request.rule as u8;
     let stages = fold_stage_mask(request.stages);
-    let sql = format!(
+    let mut stmt = self.prepare_cached(
       "
       SELECT 
         pvp_queries.uid as uid, 
@@ -127,29 +120,52 @@ impl LookupPVP for Connection {
         act_agent, 
         act_config
       FROM pvp_queries 
-        INNER JOIN pvp_query_modes 
-          ON pvp_queries.id = qid
         INNER JOIN user_actions 
           ON pvp_queries.uid = user_actions.uid
-      WHERE mode = ?1 AND {rule}_incl & ?2 AND NOT ({rule}_excl & ?2)
+      WHERE modes & ?1 AND rules & ?2 AND includes & ?3 AND NOT (excludes & ?3)
       ",
-      rule = rule,
-    );
-    if let Ok(mut stmt) = self.prepare_cached(&sql) {
-      let iter = stmt.query_map((&mode, &stages), |row| {
-        Ok(LookupPVPResponse {
-          uid: row.get(0)?,
-          qid: row.get(1)?,
-          act_agent: row.get(2)?,
-          act_config: row.get(3)?,
-        })
-      })?;
-      let list = itertools::process_results(iter, |iter| iter.collect())?;
-      Ok(list)
-    } else {
-      // skipped due to unknown rule
-      Ok(AppendList::new())
+    )?;
+    let iter = stmt.query_map((&mode, &rule, &stages), |row| {
+      Ok(LookupPVPResponse {
+        uid: row.get(0)?,
+        qid: row.get(1)?,
+        act_agent: row.get(2)?,
+        act_config: row.get(3)?,
+      })
+    })?;
+    let list = itertools::process_results(iter, |iter| iter.collect())?;
+    Ok(list)
+  }
+}
+
+impl ListPVPQuery for Connection {
+  fn list_pvp_query(
+    &self,
+    request: ListPVPQueryRequest,
+  ) -> Result<AppendList<(i64, PVPQueryRecord)>> {
+    let mut sql: String = "
+      SELECT id, modes, rules, includes, excludes
+      FROM pvp_queries
+      WHERE uid = ?1
+      "
+    .into();
+    if request.qid.is_some() {
+      sql += " AND qid = ?2";
     }
+    let mut stmt = self.prepare_cached(&sql)?;
+    let iter = stmt.query_map((&request.uid, &request.qid), |row| {
+      Ok((
+        row.get(0)?,
+        PVPQueryRecord {
+          modes: row.get(1)?,
+          rules: row.get(2)?,
+          includes: row.get(3)?,
+          excludes: row.get(4)?,
+        },
+      ))
+    })?;
+    let li = itertools::process_results(iter, |iter| iter.collect())?;
+    Ok(li)
   }
 }
 
@@ -157,6 +173,7 @@ impl LookupPVP for Connection {
 mod tests {
   use crate::{
     database::{
+      query::{CreateQuery, CreateQueryRequest, PVPQueryConfig, QueryConfig},
       user::{
         CreateUser, CreateUserRequest, LookupUser, LookupUserRequest, UpdateUserAction,
         UpdateUserActionRequest,
@@ -182,7 +199,7 @@ mod tests {
     let auth_agent = "mock_auth_agent";
     let auth_uid = "mock_auth_uid";
     let ok = conn
-      .create_user(&CreateUserRequest {
+      .create_user(CreateUserRequest {
         auth_agent,
         auth_uid,
         email: None,
@@ -192,7 +209,7 @@ mod tests {
       .unwrap();
     assert!(ok);
     let uid = conn
-      .lookup_user(&LookupUserRequest {
+      .lookup_user(LookupUserRequest {
         auth_agent,
         auth_uid,
       })
@@ -200,16 +217,22 @@ mod tests {
 
     let tx = conn.transaction().unwrap();
     let qid = tx
-      .create_pvp_query(&CreatePVPQueryRequest {
+      .create_query(CreateQueryRequest {
         uid,
-        modes: &[PVPMode::Open, PVPMode::X],
-        rules: &[(Rule::Asari, &[1, 2], &[4, 5])],
+        config: &QueryConfig::PVP {
+          config: PVPQueryConfig {
+            modes: vec![PVPMode::Open, PVPMode::X],
+            rules: vec![Rule::Asari],
+            includes: vec![1, 2],
+            excludes: vec![4, 5],
+          },
+        },
       })
       .unwrap();
     tx.commit().unwrap();
 
     let li = conn
-      .lookup_pvp(&LookupPVPRequest {
+      .lookup_pvp(LookupPVPRequest {
         start_time: Utc::now(),
         rule: Rule::Asari,
         mode: PVPMode::X,
@@ -222,7 +245,7 @@ mod tests {
     let act_agent = "mock_act_agent";
     let act_config = "mock_act_config";
     conn
-      .update_user_action(&UpdateUserActionRequest {
+      .update_user_action(UpdateUserActionRequest {
         uid,
         act_agent,
         act_config,
@@ -230,7 +253,7 @@ mod tests {
       .unwrap();
 
     let li = conn
-      .lookup_pvp(&LookupPVPRequest {
+      .lookup_pvp(LookupPVPRequest {
         start_time: Utc::now(),
         rule: Rule::Asari,
         mode: PVPMode::X,
@@ -249,7 +272,7 @@ mod tests {
     );
 
     let li = conn
-      .lookup_pvp(&LookupPVPRequest {
+      .lookup_pvp(LookupPVPRequest {
         start_time: Utc::now(),
         rule: Rule::Hoko,
         mode: PVPMode::X,
@@ -260,7 +283,7 @@ mod tests {
     assert_eq!(li.len(), 0);
 
     let li = conn
-      .lookup_pvp(&LookupPVPRequest {
+      .lookup_pvp(LookupPVPRequest {
         start_time: Utc::now(),
         rule: Rule::Asari,
         mode: PVPMode::Challenge,
@@ -271,7 +294,7 @@ mod tests {
     assert_eq!(li.len(), 0);
 
     let li = conn
-      .lookup_pvp(&LookupPVPRequest {
+      .lookup_pvp(LookupPVPRequest {
         start_time: Utc::now(),
         rule: Rule::Asari,
         mode: PVPMode::X,
@@ -282,7 +305,7 @@ mod tests {
     assert_eq!(li.len(), 1);
 
     let li = conn
-      .lookup_pvp(&LookupPVPRequest {
+      .lookup_pvp(LookupPVPRequest {
         start_time: Utc::now(),
         rule: Rule::Asari,
         mode: PVPMode::X,
@@ -293,7 +316,7 @@ mod tests {
     assert_eq!(li.len(), 0);
 
     let li = conn
-      .lookup_pvp(&LookupPVPRequest {
+      .lookup_pvp(LookupPVPRequest {
         start_time: Utc::now(),
         rule: Rule::Asari,
         mode: PVPMode::X,

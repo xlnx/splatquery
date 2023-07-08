@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufReader, net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{fs::File, io::BufReader, net::SocketAddr, sync::Arc};
 
 use axum::{
   routing::{get, post},
@@ -38,19 +38,13 @@ async fn main() -> Result<(), BoxError> {
   let config: Config = serde_json::from_reader(reader)?;
 
   // prepare auth agents
-  let auths = Arc::new(config.auth.agents.collect()?);
-  if auths.is_empty() {
-    log::warn!("at least one auth agent should be specified");
-  }
+  let auths = config.auth.agents.collect()?;
 
   // prepare action agents
-  let actions = Arc::new(config.actions.collect()?);
-  if actions.is_empty() {
-    log::warn!("at least one action agent should be specified");
-  }
+  let actions = config.actions.collect()?;
 
   // prepare database agent
-  let db = Database::new_in_memory()?;
+  let db = Database::new_from_file(config.database.path)?;
 
   // prepare jwt agent
   let jwt = jwt::Agent::new(config.auth.token.algorithm, &config.auth.token.secret);
@@ -74,6 +68,7 @@ async fn main() -> Result<(), BoxError> {
     .route("/status", get(|| async { Json(json!({"status": "ok"})) }))
     .route("/action/:agent/update", post(api::action::update))
     .route("/query/new", post(api::query::create))
+    .route("/query/list", get(api::query::list))
     .route("/auth/:agent", post(api::auth::oauth2))
     .with_state(state);
 
@@ -86,22 +81,16 @@ async fn main() -> Result<(), BoxError> {
       "https://splatquery.koishi.top".parse::<HeaderValue>()?,
       "http://localhost:5173".parse::<HeaderValue>()?,
       "http://localhost:8080".parse::<HeaderValue>()?,
+      "http://localhost:8000".parse::<HeaderValue>()?,
     ]);
 
   let app = app.layer(cors);
 
-  let cert_pem_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-    .join("cert")
-    .join("api.1.koishi.top.pem");
-  let cert_key_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-    .join("cert")
-    .join("api.1.koishi.top.key");
-  let config = RustlsConfig::from_pem_file(cert_pem_path, cert_key_path).await?;
-
-  let addr = SocketAddr::from(([0, 0, 0, 0], 443));
+  let tls = RustlsConfig::from_pem_file(config.cert.pem, config.cert.key).await?;
+  let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
   log::info!("listening on {}", addr);
 
-  axum_server::bind_rustls(addr, config)
+  axum_server::bind_rustls(addr, tls)
     .serve(app.into_make_service())
     .await?;
 

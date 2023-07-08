@@ -64,7 +64,7 @@ pub async fn oauth2(
   let auth = agent.oauth2(&request).await?;
 
   // store userinfo to db
-  let ok = db.get()?.create_user(&CreateUserRequest {
+  let ok = db.get()?.create_user(CreateUserRequest {
     auth_agent: &agent_type,
     auth_uid: &auth.id,
     name: auth.name.as_deref(),

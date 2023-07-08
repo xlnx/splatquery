@@ -9,7 +9,7 @@ use crate::Result;
 use super::{Action, ActionAgent};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct InfoLogActionAgent();
+pub struct InfoLogActionAgent {}
 
 impl ActionAgent for InfoLogActionAgent {
   fn new_action(self: Arc<Self>, _: &str) -> Result<Box<dyn Action>> {

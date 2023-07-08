@@ -1,9 +1,9 @@
-use std::{collections::HashMap, fs::File, io::BufReader, sync::Arc};
+use std::{collections::HashMap, fs::File, io::BufReader};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use splatquery::{
-  action::{config::ActionAgentsConfig, infolog::InfoLogActionAgent},
+  action::config::ActionAgentsConfig,
   database::{
     query::{CreateQuery, CreateQueryRequest, QueryConfig},
     user::{
@@ -47,8 +47,7 @@ async fn main() -> Result<(), BoxError> {
   let config: Config = serde_json::from_reader(reader)?;
 
   // prepare action agents
-  let mut agents = config.agents.collect()?;
-  agents.insert("infolog", Arc::new(InfoLogActionAgent()));
+  let agents = config.agents.collect()?;
   log::debug!("agents = {:?}", agents);
 
   // prepare database agent
@@ -56,12 +55,12 @@ async fn main() -> Result<(), BoxError> {
   let mut conn = db.get()?;
 
   // prepare splatnet agent
-  let splatnet = SplatNet::new(db.clone(), Arc::new(agents), config.splatnet);
+  let splatnet = SplatNet::new(db.clone(), agents, config.splatnet);
 
   // prepare user
   let auth_agent = "";
   let auth_uid = "";
-  let ok = conn.create_user(&CreateUserRequest {
+  let ok = conn.create_user(CreateUserRequest {
     auth_agent,
     auth_uid,
     name: None,
@@ -69,14 +68,14 @@ async fn main() -> Result<(), BoxError> {
     picture: None,
   })?;
   assert!(ok);
-  let uid = conn.lookup_user(&LookupUserRequest {
+  let uid = conn.lookup_user(LookupUserRequest {
     auth_agent,
     auth_uid,
   })?;
 
   // prepare use actions
   for (agent, config) in config.actions.iter() {
-    conn.update_user_action(&UpdateUserActionRequest {
+    conn.update_user_action(UpdateUserActionRequest {
       uid,
       act_agent: &agent,
       act_config: &config.to_string(),
@@ -87,13 +86,11 @@ async fn main() -> Result<(), BoxError> {
   if config.queries.is_empty() {
     log::warn!("at least one query should be specified");
   }
-  for query in config.queries.into_iter() {
-    let splatnet = splatnet.clone();
+  for config in config.queries.into_iter() {
     let tx = conn.transaction()?;
-    tx.create_query(&CreateQueryRequest {
+    tx.create_query(CreateQueryRequest {
       uid,
-      splatnet: splatnet.as_ref(),
-      query: &query,
+      config: &config,
     })?;
     tx.commit()?;
   }

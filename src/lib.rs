@@ -58,7 +58,7 @@ impl IntoResponse for Error {
         use rusqlite::Error;
         match err {
           Error::QueryReturnedNoRows => {
-            log::info!("entity not exist");
+            log::debug!("entity not exist");
             StatusCode::BAD_REQUEST
           }
           _ => {
@@ -71,7 +71,7 @@ impl IntoResponse for Error {
         use jsonwebtoken::errors::ErrorKind;
         match err.kind() {
           ErrorKind::ExpiredSignature => {
-            log::info!("token expired: [{:?}]", err);
+            log::debug!("token expired: [{:?}]", err);
             StatusCode::UNAUTHORIZED
           }
           _ => {
@@ -81,11 +81,11 @@ impl IntoResponse for Error {
         }
       }
       Self::InvalidParameter(param, value) => {
-        log::info!("invalid parameter `{}`: [{}]", param, value);
+        log::debug!("invalid parameter `{}`: [{}]", param, value);
         StatusCode::BAD_REQUEST
       }
       Self::Unauthorized => {
-        log::info!("unauthorized");
+        log::debug!("unauthorized");
         StatusCode::BAD_REQUEST
       }
     };

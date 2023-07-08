@@ -10,7 +10,7 @@ pub struct CreateUserRequest<'a> {
 }
 
 pub trait CreateUser {
-  fn create_user(&self, request: &CreateUserRequest) -> Result<bool>;
+  fn create_user(&self, request: CreateUserRequest) -> Result<bool>;
 }
 
 #[derive(Debug)]
@@ -20,7 +20,7 @@ pub struct LookupUserRequest<'a> {
 }
 
 pub trait LookupUser {
-  fn lookup_user(&self, request: &LookupUserRequest) -> Result<i64>;
+  fn lookup_user(&self, request: LookupUserRequest) -> Result<i64>;
 }
 
 #[derive(Debug)]
@@ -31,11 +31,11 @@ pub struct UpdateUserActionRequest<'a> {
 }
 
 pub trait UpdateUserAction {
-  fn update_user_action(&self, request: &UpdateUserActionRequest) -> Result<()>;
+  fn update_user_action(&self, request: UpdateUserActionRequest) -> Result<()>;
 }
 
 impl CreateUser for Connection {
-  fn create_user(&self, request: &CreateUserRequest) -> Result<bool> {
+  fn create_user(&self, request: CreateUserRequest) -> Result<bool> {
     let n = self
       .prepare_cached(
         "
@@ -56,7 +56,7 @@ impl CreateUser for Connection {
 }
 
 impl LookupUser for Connection {
-  fn lookup_user(&self, request: &LookupUserRequest) -> Result<i64> {
+  fn lookup_user(&self, request: LookupUserRequest) -> Result<i64> {
     self
       .prepare_cached(
         "
@@ -70,7 +70,7 @@ impl LookupUser for Connection {
 }
 
 impl UpdateUserAction for Connection {
-  fn update_user_action(&self, request: &UpdateUserActionRequest) -> Result<()> {
+  fn update_user_action(&self, request: UpdateUserActionRequest) -> Result<()> {
     self
       .prepare_cached(
         "
@@ -97,7 +97,7 @@ mod tests {
     let conn = db.get().unwrap();
     let auth_agent = "mock_auth_agent";
     let u1 = conn
-      .create_user(&CreateUserRequest {
+      .create_user(CreateUserRequest {
         auth_agent,
         auth_uid: "u1",
         name: None,
@@ -107,7 +107,7 @@ mod tests {
       .unwrap();
     assert!(u1);
     let u2 = conn
-      .create_user(&CreateUserRequest {
+      .create_user(CreateUserRequest {
         auth_agent,
         auth_uid: "u1",
         name: None,
@@ -117,7 +117,7 @@ mod tests {
       .unwrap();
     assert!(!u2);
     let u3 = conn
-      .create_user(&CreateUserRequest {
+      .create_user(CreateUserRequest {
         auth_agent,
         auth_uid: "u2",
         name: None,
@@ -128,7 +128,7 @@ mod tests {
     assert!(u3);
 
     let uid = conn
-      .lookup_user(&LookupUserRequest {
+      .lookup_user(LookupUserRequest {
         auth_agent,
         auth_uid: "u1",
       })
@@ -137,7 +137,7 @@ mod tests {
     let act_agent = "mock_act_agent";
     let act_config = "mock_act_config";
     conn
-      .update_user_action(&UpdateUserActionRequest {
+      .update_user_action(UpdateUserActionRequest {
         uid,
         act_agent,
         act_config,

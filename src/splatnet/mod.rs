@@ -26,10 +26,10 @@ mod spider;
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str)]
 #[serde(rename_all = "lowercase")]
 pub enum PVPMode {
-  TurfWar = 0,
-  Challenge = 1,
-  Open = 2,
-  X = 3,
+  TurfWar = 1,
+  Challenge = 2,
+  Open = 4,
+  X = 8,
   Unknown = 255,
 }
 
@@ -89,21 +89,6 @@ impl SplatNet {
         .unwrap(),
       state: RwLock::new(Spider::new()),
     })
-  }
-
-  pub fn get_stage_id(&self, stage: &str) -> Result<u32, BoxError> {
-    if let Ok(stage) = base64::decode(stage) {
-      let stage = std::str::from_utf8(&stage)?;
-      let id = stage
-        .split("-")
-        .last()
-        .ok_or_else(|| Error::Message(format!("invalid stage: [{}]", stage)))?;
-      Ok(id.parse()?)
-    } else {
-      Err(Box::new(Error::Message(String::from(
-        "non-base64 stage decode not implemented yet",
-      ))))
-    }
   }
 
   pub fn watch(self: Arc<Self>) -> impl Future<Output = ()> {
@@ -180,7 +165,7 @@ impl SplatNet {
     let conn = self.database.get()?;
     let start_time = DateTime::parse_from_rfc3339(&item.start_time)?;
     let rule = Rule::from_base64(&item.rule);
-    let actions = conn.lookup_pvp(&LookupPVPRequest {
+    let actions = conn.lookup_pvp(LookupPVPRequest {
       start_time: start_time.into(),
       rule,
       mode: item.mode,

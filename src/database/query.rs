@@ -1,37 +1,103 @@
-use std::collections::HashMap;
-
-use appendlist::AppendList;
 use rusqlite::Transaction;
 use serde::{Deserialize, Serialize};
 
 use crate::{
   database::pvp::{CreatePVPQueryRequest, Rule},
-  splatnet::{PVPMode, SplatNet},
+  splatnet::PVPMode,
   Error, Result,
 };
 
-use super::pvp::CreatePVPQuery;
+use super::pvp::{CreatePVPQuery, ListPVPQuery, ListPVPQueryRequest, PVPQueryRecord};
 
 #[derive(Serialize, Deserialize)]
-pub struct QueryPVPStagesConfig {
-  pub includes: Vec<String>,
+pub struct PVPQueryConfig {
+  #[serde(default = "default_query_pvp_modes")]
+  pub modes: Vec<PVPMode>,
+  #[serde(default = "default_query_pvp_product_rules")]
+  pub rules: Vec<Rule>,
+  pub includes: Vec<u32>,
   #[serde(default)]
-  pub excludes: Vec<String>,
+  pub excludes: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum QueryPVPRuleStageConfig {
-  Product {
-    #[serde(default = "default_query_pvp_product_rules")]
-    rules: Vec<Rule>,
-    #[serde(flatten)]
-    stages: QueryPVPStagesConfig,
-  },
-  Manual {
-    #[serde(flatten)]
-    rules: HashMap<Rule, QueryPVPStagesConfig>,
-  },
+impl From<&PVPQueryRecord> for PVPQueryConfig {
+  fn from(value: &PVPQueryRecord) -> Self {
+    let parse_stage_list = |stages: u32| {
+      let mut stages_ = vec![];
+      for i in 0..32 {
+        if ((1u32 << i) & stages) != 0 {
+          stages_.push(i + 1);
+        }
+      }
+      stages_
+    };
+    let parse_modes_list = |modes: u8| {
+      let mut modes_ = vec![];
+      for mode in [
+        PVPMode::TurfWar,
+        PVPMode::Challenge,
+        PVPMode::Open,
+        PVPMode::X,
+      ] {
+        if ((mode as u8) & modes) != 0 {
+          modes_.push(mode);
+        }
+      }
+      modes_
+    };
+    let parse_rules_list = |rules: u8| {
+      let mut modes_ = vec![];
+      for rule in [
+        Rule::TurfWar,
+        Rule::Area,
+        Rule::Yagura,
+        Rule::Hoko,
+        Rule::Asari,
+      ] {
+        if ((rule as u8) & rules) != 0 {
+          modes_.push(rule);
+        }
+      }
+      modes_
+    };
+    let modes = parse_modes_list(value.modes);
+    let rules = parse_rules_list(value.rules);
+    let includes = parse_stage_list(value.includes);
+    let excludes = parse_stage_list(value.excludes);
+    PVPQueryConfig {
+      modes,
+      rules,
+      includes,
+      excludes,
+    }
+  }
+}
+
+impl TryInto<PVPQueryRecord> for &PVPQueryConfig {
+  type Error = Error;
+
+  fn try_into(self) -> std::result::Result<PVPQueryRecord, Self::Error> {
+    let parse_stage_list = |stages: &[u32]| -> Result<_> {
+      let mut ret = 0u32;
+      for id in stages {
+        ret |= id
+          .checked_sub(1)
+          .and_then(|e| 1u32.checked_shl(e))
+          .ok_or_else(|| Error::InvalidParameter("stageid", id.to_string()))?;
+      }
+      Ok(ret)
+    };
+    let modes = self.modes.iter().fold(0u8, |a, b| a | *b as u8);
+    let rules = self.rules.iter().fold(0u8, |a, b| a | *b as u8);
+    let includes = parse_stage_list(&self.includes)?;
+    let excludes = parse_stage_list(&self.excludes)?;
+    Ok(PVPQueryRecord {
+      modes,
+      rules,
+      includes,
+      excludes,
+    })
+  }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -39,9 +105,8 @@ pub enum QueryPVPRuleStageConfig {
 #[serde(rename_all = "lowercase")]
 pub enum QueryConfig {
   PVP {
-    #[serde(default = "default_query_pvp_modes")]
-    modes: Vec<PVPMode>,
-    stages: QueryPVPRuleStageConfig,
+    #[serde(flatten)]
+    config: PVPQueryConfig,
   },
 }
 
@@ -60,71 +125,54 @@ fn default_query_pvp_modes() -> Vec<PVPMode> {
 
 pub struct CreateQueryRequest<'a> {
   pub uid: i64,
-  pub splatnet: &'a SplatNet,
-  pub query: &'a QueryConfig,
+  pub config: &'a QueryConfig,
 }
 
 pub trait CreateQuery {
-  fn create_query(&self, request: &CreateQueryRequest) -> Result<i64>;
+  fn create_query(&self, request: CreateQueryRequest) -> Result<i64>;
+}
+
+pub struct ListQueryRequest {
+  pub uid: i64,
+  pub qid: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ListQueryResponse {
+  pub qid: i64,
+  pub config: QueryConfig,
+}
+
+pub trait ListQuery {
+  fn list_query(&self, request: ListQueryRequest) -> Result<Vec<ListQueryResponse>>;
 }
 
 impl<'a> CreateQuery for Transaction<'a> {
-  fn create_query(&self, request: &CreateQueryRequest) -> Result<i64> {
-    let CreateQueryRequest {
-      uid,
-      splatnet,
-      query,
-    } = *request;
-
-    match query {
-      QueryConfig::PVP {
-        modes,
-        stages: rules,
-      } => {
-        let parse_stage_list = |stages: &[String]| -> Result<Vec<_>> {
-          let mut stages_ = vec![];
-          for stage in stages.iter() {
-            let stage = splatnet
-              .get_stage_id(&stage)
-              .map_err(|_| Error::InvalidParameter("stage", stage.clone()))?;
-            stages_.push(stage);
-          }
-          Ok(stages_)
-        };
-        let li = AppendList::new();
-        let parse_stage_config = |config: &QueryPVPStagesConfig| -> Result<_> {
-          let includes = li.push(parse_stage_list(config.includes.as_slice())?);
-          let excludes = li.push(parse_stage_list(config.excludes.as_slice())?);
-          Ok((includes.as_slice(), excludes.as_slice()))
-        };
-        let rules = match rules {
-          QueryPVPRuleStageConfig::Product { rules, stages } => {
-            // parse rules
-            let (includes, excludes) = parse_stage_config(stages)?;
-            rules
-              .iter()
-              .map(|rule| (*rule, includes, excludes))
-              .collect()
-          }
-          QueryPVPRuleStageConfig::Manual { rules: lookup } => {
-            // parse rules
-            let mut rules = vec![];
-            for (rule, stages) in lookup.into_iter() {
-              let (includes, excludes) = parse_stage_config(stages)?;
-              rules.push((*rule, includes, excludes))
-            }
-            rules
-          }
-        };
+  fn create_query(&self, request: CreateQueryRequest) -> Result<i64> {
+    let CreateQueryRequest { uid, config } = request;
+    match config {
+      QueryConfig::PVP { config } => {
         // do create pvp query
-        let id = self.create_pvp_query(&CreatePVPQueryRequest {
-          uid,
-          modes: &modes,
-          rules: rules.as_slice(),
-        })?;
+        let record = &config.try_into()?;
+        let id = self.create_pvp_query(CreatePVPQueryRequest { uid, record })?;
         // emit id
         Ok(id)
       }
     }
+  }
+}
+
+impl<'a> ListQuery for Transaction<'a> {
+  fn list_query(&self, request: ListQueryRequest) -> Result<Vec<ListQueryResponse>> {
+    let ListQueryRequest { uid, qid } = request;
+    let li = self.list_pvp_query(ListPVPQueryRequest { uid, qid })?;
+    let iter = li.into_iter().map(|(qid, record)| ListQueryResponse {
+      qid: *qid,
+      config: QueryConfig::PVP {
+        config: record.into(),
+      },
+    });
+    let li = iter.collect();
+    Ok(li)
   }
 }

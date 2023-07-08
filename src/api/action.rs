@@ -35,11 +35,11 @@ pub async fn update(
 
   let mut conn = db.get()?;
   let tx = conn.transaction()?;
-  let uid = tx.lookup_user(&LookupUserRequest {
+  let uid = tx.lookup_user(LookupUserRequest {
     auth_agent: &user.agent,
     auth_uid: &user.auth.id,
   })?;
-  tx.update_user_action(&UpdateUserActionRequest {
+  tx.update_user_action(UpdateUserActionRequest {
     uid,
     act_agent: &agent_type,
     act_config: &config,
