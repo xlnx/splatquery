@@ -57,7 +57,7 @@ main {
 
 .ts-control, .ts-control>input {
   @apply
-  text-base sm:text-lg md:text-xl;
+  fmt-md;
 }
 
 .ts-control {
@@ -70,8 +70,8 @@ main {
 .fmt-form-label {
   @apply
   block
-  mb-2
-  text-base sm:text-xl md:text-2xl
+  mb-1 sm:mb-2
+  fmt-lg
   text-gray-900 dark:text-white;
 }
 
@@ -79,7 +79,7 @@ main {
   @apply
   inline-flex items-center 
   px-2 py-2 
-  text-sm sm:text-lg md:text-xl
+  fmt-md
   text-gray-900 
   dark:text-white
   font-normal text-center 
@@ -96,27 +96,62 @@ main {
   fmt-focusable;
 }
 
-.fmt-button-base {
+.fmt-xs {
   @apply
-  text-white 
-  font-medium 
-  rounded-lg 
-  text-lg sm:text-xl md:text-2xl
-  px-4 sm:px-8 py-1.5 sm:py-2.5;
+  text-xs sm:text-sm md:text-sm;
+}
+
+.fmt-sm {
+  @apply
+  text-sm sm:text-base md:text-base;
+}
+
+.fmt-md {
+  @apply
+  text-sm sm:text-lg md:text-xl;
+}
+
+.fmt-lg {
+  @apply
+  text-base sm:text-xl md:text-2xl;
+}
+
+.fmt-xl {
+  @apply
+  text-lg sm:text-2xl md:text-3xl;
+}
+
+.fmt-text-primary {
+  @apply
+  text-gray-900 dark:text-white;
+}
+
+.fmt-text-secondary {
+  @apply
+  text-gray-700 dark:text-gray-400;
+}
+
+.fmt-border-color {
+  @apply
+  border-gray-200 
+  dark:border-gray-700;
 }
 
 .fmt-button {
   @apply
-  fmt-button-base
+  text-white 
+  font-medium 
+  rounded-lg 
+  px-4 sm:px-8 py-1.5 sm:py-2.5
   bg-blue-700 hover:bg-blue-800 
   dark:bg-blue-600 dark:hover:bg-blue-700 
   focus:ring-4 focus:ring-blue-300 
-  focus:outline-none dark:focus:ring-blue-800;
+  focus:outline-none dark:focus:ring-blue-800
+  disabled:opacity-75;
 }
 
-.fmt-button-alert {
+.fmt-button.fmt-alert {
   @apply
-  fmt-button-base
   bg-red-700 hover:bg-red-800 
   dark:bg-red-600 dark:hover:bg-red-700 
   focus:ring-4 focus:ring-red-300 
@@ -138,16 +173,17 @@ main {
 .fmt-badge {
   @apply
   inline-block 
-  text-sm font-medium 
-  mr-2 px-2.5 py-0.5 
+  fmt-xs 
+  font-medium 
+  px-2 py-0 
   rounded;
 }
 
 .fmt-badge-success {
   @apply
   fmt-badge
-  text-green-800 dark:text-green-300
-  bg-green-100 dark:bg-green-900;
+  text-blue-800 dark:text-blue-300
+  bg-blue-100 dark:bg-blue-900;
 }
 
 .fmt-badge-error {
@@ -162,4 +198,15 @@ main {
   bg-white
   dark:bg-gray-800
   !important;
+}
+
+a.fmt-webpush-ua {
+  @apply
+  overflow-visible;
+}
+
+.fmt-button.fmt-alert.fmt-webpush-ua-dismiss {
+  @apply
+  px-2
+  rounded-l-none;
 }

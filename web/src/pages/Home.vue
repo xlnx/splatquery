@@ -1,7 +1,7 @@
 <template>
   <div class="py-8 px-4 mx-auto max-w-screen-xl text-center lg:py-16">
     <h1
-      class="font-splatoon1 mb-4 text-5xl font-extrabold tracking-tight leading-none text-gray-900 md:text-7xl lg:text-8xl dark:text-white">
+      class="font-splatoon1 mb-4 text-5xl font-extrabold tracking-tight leading-none md:text-7xl lg:text-8xl fmt-text-primary">
       SplatQuery
     </h1>
     <p class="mb-8 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 lg:px-48 dark:text-gray-400">
@@ -21,13 +21,13 @@
       </button>
     </div>
     <div class="flex flex-col space-y-4 sm:flex-row sm:justify-center sm:space-y-0 sm:space-x-4" v-if="showMain">
-      <a type="button" class="fmt-button" href="query/new">
+      <a type="button" class="fmt-button fmt-lg" href="query/new">
         + New Query
       </a>
-      <a type="button" class="fmt-button" href="query/list">
+      <a type="button" class="fmt-button fmt-lg" href="query/list">
         List Queries
       </a>
-      <a type="button" class="fmt-button" href="action/list">
+      <a type="button" class="fmt-button fmt-lg" href="action/list">
         List Actions
       </a>
     </div>

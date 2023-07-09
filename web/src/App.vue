@@ -1,15 +1,15 @@
 <template>
   <main class="font-splatoon2 bg-white dark:bg-gray-900 transition-colors">
-    <nav class="border-gray-200 bg-gray-50 dark:bg-gray-800 dark:border-gray-700 mb-4 transition-colors">
+    <nav class="fmt-border-color bg-gray-50 dark:bg-gray-800 mb-4 transition-colors">
       <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
         <a href="/" class="flex items-center">
           <img src="/src/assets/logo.svg" class="h-8 mr-3" alt="Flowbite Logo" />
           <span
-            class="font-splatoon1 self-center text-2xl font-semibold whitespace-nowrap dark:text-white">SplatQuery</span>
+            class="font-splatoon1 self-center text-2xl font-semibold whitespace-nowrap fmt-text-primary">SplatQuery</span>
         </a>
         <div class="flex items-center md:order-2 space-x-4">
           <button
-            class="inline-flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 w-10 h-10 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5"
+            class="inline-flex items-center justify-center fmt-text-secondary hover:bg-gray-100 w-10 h-10 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5"
             @click="toggleTheme">
             <svg class="fill-current w-4 h-4" viewBox="0 0 18 20">
               <path v-if="theme != 'dark'"

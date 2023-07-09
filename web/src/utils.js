@@ -5,19 +5,29 @@ const getModeImgUrl = (mode) => {
     x: "x",
     event: "event"
   }
-  return `/src/assets/img/modes/${m[mode]}.svg`
+  return `/src/assets/img/mode/${m[mode]}.svg`
 }
 
 const getRuleImgUrl = (rule) => {
-  return `/src/assets/img/rules/${rule}.svg`
+  return `/src/assets/img/rule/${rule}.svg`
 }
 
 const getPVPStageImgUrl = (stage) => {
-  return `/src/assets/img/stages/vs/${btoa(`VsStage-${stage}`)}.png`
+  return `/src/assets/img/stage/vs/${btoa(`VsStage-${stage}`)}.png`
 }
 
 const getCoopStageImgUrl = (stage) => {
-  return `/src/assets/img/stages/coop/${btoa(`CoopStage-${stage}`)}.png`
+  return `/src/assets/img/stage/coop/${btoa(`CoopStage-${stage}`)}.png`
+}
+
+const getBrowserImgUrl = (key) => {
+  const m = {
+    'chrome': 'chrome.svg',
+    'firefox': 'firefox.svg',
+    'safari': 'safari.png',
+    'edge': 'edge.png',
+  }
+  return `/src/assets/img/browser/${m[key.toLowerCase()] || 'chromium.svg'}`
 }
 
 export {
@@ -25,4 +35,5 @@ export {
   getRuleImgUrl,
   getPVPStageImgUrl,
   getCoopStageImgUrl,
+  getBrowserImgUrl,
 }

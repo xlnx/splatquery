@@ -28,6 +28,11 @@ module.exports = {
       },
     },
   },
+  variants: {
+    extend: {
+      opacity: ['disabled'],
+    }
+  },
   plugins: [
     require('flowbite/plugin'),
     plugin(function({ addVariant }) {

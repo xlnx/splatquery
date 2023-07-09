@@ -10,8 +10,8 @@
     </div>
   </div>
   <div class="p-4">
-    <span class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white pr-2">PVP</span>
-    <span class="font-normal text-gray-700 dark:text-gray-400">{{ localTime }}</span>
+    <span class="text-2xl font-bold tracking-tight fmt-text-primary pr-2">PVP</span>
+    <span class="font-normal fmt-text-secondary">{{ localTime }}</span>
   </div>
 </template>
 
