@@ -24,7 +24,7 @@ const failed = ref();
 onMounted(async () => {
   try {
     const { data } = await auth.oauth2('google', {
-      url: 'https://api.1.koishi.top/auth/google',
+      url: import.meta.env.VITE_API_SERVER + '/auth/google',
       code: true,
       data: {
         code: route.query.code,

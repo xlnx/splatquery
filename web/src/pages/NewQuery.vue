@@ -55,7 +55,7 @@ const create = async () => {
   try {
     const form = { type: type.value, ...query };
     console.log(form);
-    await axios.post('https://api.1.koishi.top/query/new', form);
+    await axios.post(import.meta.env.VITE_API_SERVER + '/query/new', form);
     window.location.replace('/query/list');
   } catch (err) {
     console.error(err);

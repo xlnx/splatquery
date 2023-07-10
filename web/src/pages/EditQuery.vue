@@ -74,7 +74,7 @@ onMounted(async () => {
       throw `qid=[${props.qid}] is not an integer`;
     }
     const li = await backOff(async () => {
-      const response = await axios.get(`https://api.1.koishi.top/query/list?qtype=${props.qtype}&qid=${props.qid}`);
+      const response = await axios.get(import.meta.env.VITE_API_SERVER + `/query/list?qtype=${props.qtype}&qid=${props.qid}`);
       if (response.status != 200) {
         throw response;
       }
@@ -105,7 +105,7 @@ const update = async () => {
   try {
     const form = { type: query.type.value, ...query };
     console.log(form);
-    await axios.post(`https://api.1.koishi.top/query/update?qid=${props.qid}`, form);
+    await axios.post(import.meta.env.VITE_API_SERVER + `/query/update?qid=${props.qid}`, form);
     window.location.replace('/query/list');
   } catch (err) {
     console.error(err);
@@ -116,7 +116,7 @@ const update = async () => {
 const remove = async () => {
   submission.value = 'remove';
   try {
-    await axios.post(`https://api.1.koishi.top/query/delete?qid=${props.qid}&qtype=${props.qtype}`);
+    await axios.post(import.meta.env.VITE_API_SERVER + `/query/delete?qid=${props.qid}&qtype=${props.qtype}`);
     window.location.replace('/query/list');
   } catch (err) {
     console.error(err);

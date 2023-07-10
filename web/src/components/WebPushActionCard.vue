@@ -1,12 +1,12 @@
 <template>
-  <ActionCard name="Web Push" brief="Receive notifications via your browser." id="webpush" :active="active">
+  <ActionCard name="Web Push" brief="Receive notifications via your browser." id="webpush">
     <template v-slot:badge>
       <span class="flex flex-1 justify-between">
         <div class="pr-2">
           <LoadingCircle class="h-7 w-7" v-if="submission == 'toggle'" />
         </div>
         <div class="pr-4">
-          <Toggle :checked="false" @toggle="toggle" :disabled="!!submission" />
+          <Toggle :checked="active" @toggle="toggle" :disabled="!!submission" />
         </div>
       </span>
     </template>
@@ -66,13 +66,13 @@ onMounted(initFlowbite);
 
 const props = defineProps({
   defaultActive: Boolean,
-  defaultConfig: Object,
+  defaultConfig: Array,
 })
 
 const submission = ref();
 const endpoint = ref();
-const active = ref(props.defaultActive && !!props.defaultConfig);
-const agents = ref(props.defaultConfig && props.defaultConfig.agents || []);
+const active = ref(props.defaultActive);
+const agents = ref(props.defaultConfig || []);
 const isRegistered = computed(() => agents.value.some(e => e.endpoint && endpoint.value == e.endpoint));
 
 const subscribeImpl = async () => {
@@ -81,17 +81,17 @@ const subscribeImpl = async () => {
     userVisibleOnly: true,
     applicationServerKey: "BDKNzkxVCQM1T131qz1Ctoz3f8t2sNge-uD7D216Wi1rrVaOYfl1r_ZYNKD2LgYAVWjXVZdUHvU0BNnVhdGJSA0",
   });
-  const { endpoint, keys: { p256dh, auth } } = sub.toJSON()
+  const { endpoint, keys } = sub.toJSON()
   const info = new UAParser(navigator.userAgent).getResult()
   const agent = {
-    endpoint, p256dh, auth,
+    endpoint, keys,
     browser: info.browser.name,
     os: `${info.os.name} ${info.os.version}`,
     // device: ua.device.name,
   }
   // submit agent to server
   await backOff(async () => {
-    const response = await axios.post('https://api.1.koishi.top/action/webpush/subscribe', agent)
+    const response = await axios.post(import.meta.env.VITE_API_SERVER + '/action/webpush/subscribe', agent)
     if (response.status != 200) {
       throw response;
     }
@@ -108,7 +108,7 @@ const subscribeImpl = async () => {
 const dismissImpl = async ({ endpoint }) => {
   // submit agent to server
   await backOff(async () => {
-    const response = await axios.post('https://api.1.koishi.top/action/webpush/dismiss', { endpoint })
+    const response = await axios.post(import.meta.env.VITE_API_SERVER + '/action/webpush/dismiss', { endpoint })
     if (response.status != 200) {
       throw response;
     }
@@ -151,7 +151,7 @@ const toggle = async (newActive) => {
       await subscribeImpl();
     }
     await backOff(async () => {
-      const response = await axios.post(`https://api.1.koishi.top/action/webpush/toggle?active=${!!newActive}`)
+      const response = await axios.post(import.meta.env.VITE_API_SERVER + `/action/webpush/toggle?active=${!!newActive}`)
       if (response.status != 200) {
         throw response;
       }

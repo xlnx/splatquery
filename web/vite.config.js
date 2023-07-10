@@ -8,20 +8,20 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   plugins: [
     vue(),
-    // VitePWA({
-    //   // injectRegister: 'auto',
-    //   injectRegister: 'script',
-    //   strategies: 'injectManifest',
-    //   srcDir: 'src',
-    //   filename: 'sw.js',
-    //   registerType: 'autoUpdate',
-    //   injectManifest: {
-    //     rollupFormat: 'iife',
-    //   },
-    //   devOptions: {
-    //     enabled: true
-    //   },
-    // })
+    VitePWA({
+      // injectRegister: 'auto',
+      injectRegister: 'script',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      registerType: 'autoUpdate',
+      injectManifest: {
+        rollupFormat: 'iife',
+      },
+      devOptions: {
+        enabled: true
+      },
+    })
   ],
   resolve: {
     alias: {

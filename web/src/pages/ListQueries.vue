@@ -42,7 +42,7 @@ const failed = ref();
 onMounted(async () => {
   try {
     queries.value = await backOff(async () => {
-      const response = await axios.get('https://api.1.koishi.top/query/list');
+      const response = await axios.get(import.meta.env.VITE_API_SERVER + '/query/list');
       if (response.status != 200) {
         throw response;
       }

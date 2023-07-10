@@ -1,11 +1,11 @@
 <template>
-  <div class="grid grid-flow-row-dense grid-cols-1 lg:grid-cols-2" v-if="actions">
+  <div class="grid grid-flow-row-dense grid-cols-1 lg:grid-cols-2" v-if="!!response">
     <div class="m-2 sm:m-3 lg:m-4">
-      <WebPushActionCard :defaultActive="false" />
+      <WebPushActionCard :defaultActive="active.webpush" :defaultConfig="response.webpush" />
     </div>
   </div>
 
-  <div v-if="!actions && !failed">
+  <div v-if="!response && !failed">
     <Loading />
   </div>
 
@@ -25,13 +25,14 @@ import WebPushActionCard from '../components/WebPushActionCard.vue';
 
 onMounted(initFlowbite);
 
-const actions = ref();
+const response = ref();
+const active = ref({});
 const failed = ref();
 
 onMounted(async () => {
   try {
-    actions.value = await backOff(async () => {
-      const response = await axios.get('https://api.1.koishi.top/action/list');
+    response.value = await backOff(async () => {
+      const response = await axios.get(import.meta.env.VITE_API_SERVER + '/action/list');
       if (response.status != 200) {
         throw response;
       }
@@ -39,7 +40,9 @@ onMounted(async () => {
     }, {
       numOfAttempts: 5,
     });
-    console.log(JSON.parse(JSON.stringify(actions.value)));
+    for (let action of response.value.actions) {
+      active.value[action] = true;
+    }
   } catch (err) {
     console.error(err);
     failed.value = true;
