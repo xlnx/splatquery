@@ -1,9 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
-use serde_json::Value;
 
-use crate::Result;
+use crate::{database::Database, splatnet::Message, Result};
 
 pub mod config;
 pub mod infolog;
@@ -12,11 +11,7 @@ pub mod webpush;
 
 pub type ActionAgentMap = HashMap<&'static str, Arc<dyn ActionAgent>>;
 
-pub trait ActionAgent: std::fmt::Debug + Send + Sync {
-  fn new_action(self: Arc<Self>, config: &str) -> Result<Box<dyn Action>>;
-}
-
 #[async_trait]
-pub trait Action: Send + Sync {
-  async fn emit(self: Box<Self>, item: &Value) -> Result<()>;
+pub trait ActionAgent: std::fmt::Debug + Send + Sync {
+  async fn send(self: Arc<Self>, db: Database, msg: Message, uids: &[i64]) -> Result<()>;
 }

@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 
 use crate::{
-  database::pvp::{CreatePVPQueryRequest, Rule},
-  splatnet::PVPMode,
+  database::pvp::CreatePVPQueryRequest,
+  splatnet::{PVPMode, PVPRule},
   Error, Result,
 };
 
@@ -26,7 +26,7 @@ pub struct PVPQueryConfig {
   #[serde(default = "default_query_pvp_modes")]
   pub modes: Vec<PVPMode>,
   #[serde(default = "default_query_pvp_product_rules")]
-  pub rules: Vec<Rule>,
+  pub rules: Vec<PVPRule>,
   pub includes: Vec<u32>,
   #[serde(default)]
   pub excludes: Vec<u32>,
@@ -60,11 +60,11 @@ impl From<&PVPQueryRecord> for PVPQueryConfig {
     let parse_rules_list = |rules: u8| {
       let mut modes_ = vec![];
       for rule in [
-        Rule::TurfWar,
-        Rule::Area,
-        Rule::Yagura,
-        Rule::Hoko,
-        Rule::Asari,
+        PVPRule::TurfWar,
+        PVPRule::Area,
+        PVPRule::Yagura,
+        PVPRule::Hoko,
+        PVPRule::Asari,
       ] {
         if ((rule as u8) & rules) != 0 {
           modes_.push(rule);
@@ -122,8 +122,13 @@ pub enum QueryConfig {
   },
 }
 
-fn default_query_pvp_product_rules() -> Vec<Rule> {
-  vec![Rule::Area, Rule::Yagura, Rule::Hoko, Rule::Asari]
+fn default_query_pvp_product_rules() -> Vec<PVPRule> {
+  vec![
+    PVPRule::Area,
+    PVPRule::Yagura,
+    PVPRule::Hoko,
+    PVPRule::Asari,
+  ]
 }
 
 fn default_query_pvp_modes() -> Vec<PVPMode> {
@@ -149,7 +154,7 @@ pub struct ListQueryRequest {
   pub qid: Option<i64>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct ListQueryResponse {
   pub qid: i64,
   pub config: QueryConfig,

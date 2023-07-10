@@ -6,6 +6,7 @@ use rusqlite::Connection;
 
 use crate::Result;
 
+pub mod action;
 pub mod pvp;
 pub mod query;
 pub mod user;
@@ -41,6 +42,7 @@ fn do_init(conn: &mut Connection) -> Result<(), rusqlite::Error> {
     CREATE TABLE IF NOT EXISTS
     users (
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_time        DATETIME DEFAULT CURRENT_TIMESTAMP,
       auth_agent          TEXT NOT NULL,
       auth_uid            TEXT NOT NULL,
       name                TEXT,
@@ -66,12 +68,24 @@ fn do_init(conn: &mut Connection) -> Result<(), rusqlite::Error> {
 
     CREATE TABLE IF NOT EXISTS
     user_actions (
-      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
       uid                 INTEGER NOT NULL,
       act_agent           TEXT NOT NULL,
-      act_config          TEXT NOT NULL,
+      act_active          TINYINT NOT NULL,
       FOREIGN KEY ( uid ) REFERENCES users ( id ) ON DELETE CASCADE,
       UNIQUE ( uid, act_agent )
+    );
+
+    CREATE TABLE IF NOT EXISTS
+    action_webpush (
+      uid                 INTEGER NOT NULL,
+      endpoint            TEXT NOT NULL,
+      p256dh              TEXT NOT NULL,
+      auth                TEXT NOT NULL,
+      browser             TEXT,
+      device              TEXT,
+      os                  TEXT,
+      FOREIGN KEY ( uid ) REFERENCES users ( id ) ON DELETE CASCADE,
+      UNIQUE ( endpoint )
     );
 
     COMMIT;",

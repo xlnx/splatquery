@@ -11,7 +11,7 @@ name = "server"
 required-features = ["api"]
 
 [features]
-default = ["webpush"]
+default = []
 api = [
   "dep:axum",
   "dep:axum-auth",
@@ -21,7 +21,7 @@ api = [
   "dep:jsonwebtoken",
 ]
 api-auth-google = ["api"]
-webpush = ["dep:web-push"]
+webpush = ["api", "dep:web-push"]
 
 [dependencies]
 appendlist = { git = "https://github.com/xlnx/appendlist.git" }

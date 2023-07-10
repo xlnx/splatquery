@@ -78,7 +78,6 @@ async fn main() -> Result<(), BoxError> {
     conn.update_user_action(UpdateUserActionRequest {
       uid,
       act_agent: &agent,
-      act_config: &config.to_string(),
     })?;
   }
 

@@ -72,7 +72,6 @@ pub async fn list(
     auth_uid: &user.id,
   })?;
 
-  // if let Some(query) = request.query;
   let mut li = Vec::new();
 
   if qtype.is_none() || qtype.unwrap() == QueryType::PVP {

@@ -20,7 +20,7 @@ pub struct GearSpiderItem {
   pub additional_gear_powers: i32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PVPSpiderItem {
   pub start_time: String,
   pub end_time: String,

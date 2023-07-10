@@ -2,27 +2,20 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
-use crate::Result;
+use crate::{database::Database, splatnet::Message, Result};
 
-use super::{Action, ActionAgent};
+use super::ActionAgent;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InfoLogActionAgent {}
 
-impl ActionAgent for InfoLogActionAgent {
-  fn new_action(self: Arc<Self>, _: &str) -> Result<Box<dyn Action>> {
-    Ok(Box::new(InfoLogAction()))
-  }
-}
-
-pub struct InfoLogAction();
-
 #[async_trait]
-impl Action for InfoLogAction {
-  async fn emit(self: Box<Self>, item: &Value) -> Result<()> {
-    log::info!("{:?}", item);
+impl ActionAgent for InfoLogActionAgent {
+  async fn send(self: Arc<Self>, _db: Database, msg: Message, uids: &[i64]) -> Result<()> {
+    for uid in uids.iter() {
+      log::info!("uid[{}] <- [{:?}]", uid, msg);
+    }
     Ok(())
   }
 }

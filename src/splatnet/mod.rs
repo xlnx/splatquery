@@ -3,15 +3,14 @@ use derivative::Derivative;
 use futures::{future::join_all, Future, FutureExt};
 use serde::{Deserialize, Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
-use serde_json::json;
-use std::{pin::Pin, sync::Arc, time::Duration};
+use std::{collections::HashMap, pin::Pin, sync::Arc, time::Duration};
 use tokio::sync::RwLock;
 use tokio_stream::{wrappers::IntervalStream, StreamExt};
 
 use crate::{
   action::ActionAgentMap,
   database::{
-    pvp::{LookupPVP, LookupPVPRequest, Rule},
+    pvp::{LookupPVP, LookupPVPRequest},
     Database,
   },
   BoxError,
@@ -20,6 +19,7 @@ use crate::{
 use self::spider::{CoopSpiderItem, GearSpiderItem, PVPSpiderItem, Spider};
 
 mod gear;
+pub mod i18n;
 mod schedules;
 mod spider;
 
@@ -31,6 +31,30 @@ pub enum PVPMode {
   Open = 4,
   X = 8,
   Unknown = 255,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str)]
+#[serde(rename_all = "lowercase")]
+pub enum PVPRule {
+  TurfWar = 1,
+  Area = 2,
+  Yagura = 4,
+  Hoko = 8,
+  Asari = 16,
+  Unknown = 255,
+}
+
+impl PVPRule {
+  pub fn from_base64(s: &str) -> Self {
+    match s {
+      "VnNSdWxlLTA=" => Self::TurfWar,
+      "VnNSdWxlLTE=" => Self::Area,
+      "VnNSdWxlLTI=" => Self::Yagura,
+      "VnNSdWxlLTM=" => Self::Hoko,
+      "VnNSdWxlLTQ=" => Self::Asari,
+      _ => Self::Unknown,
+    }
+  }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -62,6 +86,11 @@ pub struct SplatNetUpdateIntervalConfig {
   #[serde(default)]
   #[derivative(Default(value = "30"))]
   pub schedules: i64,
+}
+
+#[derive(Debug)]
+pub enum Message {
+  PVP(PVPSpiderItem),
 }
 
 pub struct SplatNet {
@@ -164,39 +193,39 @@ impl SplatNet {
   async fn handle_pvp_update_1(&self, item: PVPSpiderItem) -> Result<(), BoxError> {
     let conn = self.database.get()?;
     let start_time = DateTime::parse_from_rfc3339(&item.start_time)?;
-    let rule = Rule::from_base64(&item.rule);
+    let rule = PVPRule::from_base64(&item.rule);
     let actions = conn.lookup_pvp(LookupPVPRequest {
       start_time: start_time.into(),
       rule,
       mode: item.mode,
       stages: &item.stages,
     })?;
-    if actions.len() > 0 {
-      let item = Arc::new(json!({
-        "type": "pvp",
-        "start_time": item.start_time,
-        "end_time": item.end_time,
-        "rule": rule.to_string(),
-        "stages": item.stages,
-        "mode": item.mode.to_string(),
-      }));
-      for action in actions.into_iter() {
-        let agent = self.actions.get(action.act_agent.as_str()).ok_or_else(|| {
-          Error::Message(format!(
-            "action agent [{}] is not registered",
-            action.act_agent
-          ))
-        })?;
-        let action = agent.clone().new_action(&action.act_config)?;
-        // TODO: behaviour
-        let item = item.clone();
-        tokio::spawn(async move {
-          action
-            .emit(&item)
-            .await
-            .unwrap_or_else(|err| log::warn!("trigger action failed: [{:?}]", err));
-        });
-      }
+    if actions.len() == 0 {
+      return Ok(());
+    }
+    let mut dispatch = HashMap::new();
+    for action in actions.into_iter() {
+      dispatch
+        .entry(&action.act_agent)
+        .or_insert_with(|| vec![])
+        .push(action.uid);
+    }
+    for (act_agent, uids) in dispatch.into_iter() {
+      let agent = self
+        .actions
+        .get(act_agent.as_str())
+        .ok_or_else(|| Error::Message(format!("action agent [{}] is not registered", act_agent)))?
+        .clone();
+      tokio::spawn({
+        let act_agent = act_agent.clone();
+        let db = self.database.clone();
+        let msg = Message::PVP(item.clone());
+        async move {
+          if let Err(err) = agent.send(db, msg, uids.as_slice()).await {
+            log::error!("action [{}] failed with error: [{:?}]", act_agent, err);
+          }
+        }
+      });
     }
     Ok(())
   }

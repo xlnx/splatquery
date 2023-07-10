@@ -27,7 +27,6 @@ pub trait LookupUser {
 pub struct UpdateUserActionRequest<'a> {
   pub uid: i64,
   pub act_agent: &'a str,
-  pub act_config: &'a str,
 }
 
 pub trait UpdateUserAction {
@@ -75,11 +74,11 @@ impl UpdateUserAction for Connection {
       .prepare_cached(
         "
         INSERT OR REPLACE
-        INTO user_actions ( uid, act_agent, act_config )
-        VALUES ( ?1, ?2, ?3 )
+        INTO user_actions ( uid, act_agent, act_active )
+        VALUES ( ?1, ?2, 1 )
         ",
       )?
-      .execute((&request.uid, &request.act_agent, &request.act_config))?;
+      .execute((&request.uid, &request.act_agent))?;
     Ok(())
   }
 }
@@ -135,13 +134,8 @@ mod tests {
       .unwrap();
 
     let act_agent = "mock_act_agent";
-    let act_config = "mock_act_config";
     conn
-      .update_user_action(UpdateUserActionRequest {
-        uid,
-        act_agent,
-        act_config,
-      })
+      .update_user_action(UpdateUserActionRequest { uid, act_agent })
       .unwrap();
   }
 }

@@ -66,13 +66,25 @@ async fn main() -> Result<(), BoxError> {
 
   let app = Router::new()
     .route("/status", get(|| async { Json(json!({"status": "ok"})) }))
-    .route("/action/:agent/update", post(api::action::update))
+    // query apis
     .route("/query/new", post(api::query::create))
     .route("/query/list", get(api::query::list))
     .route("/query/update", post(api::query::update))
     .route("/query/delete", post(api::query::delete))
-    .route("/auth/:agent", post(api::auth::oauth2))
-    .with_state(state);
+    // action apis
+    .route("/action/:agent/toggle", post(api::action::toggle))
+    .route("/action/list", get(api::action::list))
+    // auth apis
+    .route("/auth/:agent", post(api::auth::oauth2));
+
+  #[cfg(feature = "webpush")]
+  use api::action::webpush;
+  #[cfg(feature = "webpush")]
+  let app = app
+    .route("/action/webpush/subscribe", post(webpush::subscribe))
+    .route("/action/webpush/dismiss", post(webpush::dismiss));
+
+  let app = app.with_state(state);
 
   // add cors layer to the top
   let cors = CorsLayer::new()
