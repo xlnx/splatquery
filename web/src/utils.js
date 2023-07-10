@@ -5,19 +5,19 @@ const getModeImgUrl = (mode) => {
     x: "x",
     event: "event"
   }
-  return `/src/assets/img/mode/${m[mode]}.svg`
+  return `/img/mode/${m[mode]}.svg`
 }
 
 const getRuleImgUrl = (rule) => {
-  return `/src/assets/img/rule/${rule}.svg`
+  return `/img/rule/${rule}.svg`
 }
 
 const getPVPStageImgUrl = (stage) => {
-  return `/src/assets/img/stage/vs/${btoa(`VsStage-${stage}`)}.png`
+  return `/img/stage/vs/${btoa(`VsStage-${stage}`)}.png`
 }
 
 const getCoopStageImgUrl = (stage) => {
-  return `/src/assets/img/stage/coop/${btoa(`CoopStage-${stage}`)}.png`
+  return `/img/stage/coop/${btoa(`CoopStage-${stage}`)}.png`
 }
 
 const getBrowserImgUrl = (key) => {
@@ -27,7 +27,7 @@ const getBrowserImgUrl = (key) => {
     'safari': 'safari.png',
     'edge': 'edge.png',
   }
-  return `/src/assets/img/browser/${m[key.toLowerCase()] || 'chromium.svg'}`
+  return `/img/browser/${m[key.toLowerCase()] || 'chromium.svg'}`
 }
 
 export {

@@ -3,7 +3,7 @@
     <nav class="fmt-border-color bg-gray-50 dark:bg-gray-800 mb-4 transition-colors">
       <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
         <a href="/" class="flex items-center">
-          <img src="/src/assets/logo.svg" class="h-8 mr-3" alt="Flowbite Logo" />
+          <img src="/logo.svg" class="h-8 mr-3" alt="Flowbite Logo" />
           <span
             class="font-splatoon1 self-center text-2xl font-semibold whitespace-nowrap fmt-text-primary">SplatQuery</span>
         </a>
