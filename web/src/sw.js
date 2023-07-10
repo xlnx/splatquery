@@ -6,6 +6,8 @@ self.skipWaiting();
 
 // cleanupOutdatedCaches();
 // precacheAndRoute(self.__WB_MANIFEST);
+const manifest = self.__WB_MANIFEST;
+console.log(manifest);
 
 self.addEventListener("push", async (event) => {
   const { title, options } = event.data.json();
