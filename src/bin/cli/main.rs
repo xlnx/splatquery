@@ -12,8 +12,8 @@ use splatquery::{
     },
     Database,
   },
-  splatnet::{SplatNet, SplatNetConfig},
-  BoxError,
+  splatnet::{SplatNetAgent, SplatNetConfig},
+  BoxError, Error,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -55,7 +55,7 @@ async fn main() -> Result<(), BoxError> {
   let mut conn = db.get()?;
 
   // prepare splatnet agent
-  let splatnet = SplatNet::new(db.clone(), agents, config.splatnet);
+  let splatnet = SplatNetAgent::new(db.clone(), agents, config.splatnet);
 
   // prepare user
   let auth_agent = "";
@@ -94,7 +94,10 @@ async fn main() -> Result<(), BoxError> {
     tx.commit()?;
   }
 
-  splatnet.watch().await;
+  splatnet
+    .watch()
+    .await
+    .map_err(|err| Error::InternalServerError(err))?;
 
   Ok(())
 }

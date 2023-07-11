@@ -6,6 +6,7 @@ use axum::{
 };
 use axum_server::tls_rustls::RustlsConfig;
 use chrono::Duration;
+use futures::TryFutureExt;
 use http::{header::AUTHORIZATION, HeaderValue, Method};
 use serde_json::json;
 use tower_http::cors::{Any, CorsLayer};
@@ -18,8 +19,8 @@ use splatquery::{
     state::{AppState, InnerAppState},
   },
   database::Database,
-  splatnet::SplatNet,
-  BoxError, Result,
+  splatnet::SplatNetAgent,
+  BoxError, Error, Result,
 };
 
 #[tokio::main]
@@ -37,11 +38,11 @@ async fn main() -> Result<(), BoxError> {
   let reader = BufReader::new(file);
   let config: Config = serde_json::from_reader(reader)?;
 
-  // prepare auth agents
-  let auths = config.auth.agents.collect()?;
-
   // prepare action agents
   let actions = config.actions.collect()?;
+
+  // prepare auth agents
+  let auths = config.auth.agents.collect()?;
 
   // prepare database agent
   let db = Database::new_from_file(config.database.path)?;
@@ -51,16 +52,16 @@ async fn main() -> Result<(), BoxError> {
   let auth_expiration = Duration::days(config.auth.token.expire_days);
 
   // prepare splatnet agent
-  let splatnet = SplatNet::new(db.clone(), actions.clone(), config.splatnet);
-  tokio::spawn(splatnet.clone().watch());
+  let splatnet = SplatNetAgent::new(db.clone(), actions.clone(), config.splatnet)
+    .watch()
+    .map_err(|err| Error::InternalServerError(err));
 
   // make app state
   let state = AppState(Arc::new(InnerAppState {
-    splatnet,
     db,
     jwt,
-    auths,
     actions,
+    auths,
     auth_expiration,
   }));
 
@@ -90,23 +91,31 @@ async fn main() -> Result<(), BoxError> {
   let cors = CorsLayer::new()
     .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
     .allow_headers(Any)
-    .expose_headers([AUTHORIZATION])
-    .allow_origin([
-      "https://splatquery.koishi.top".parse::<HeaderValue>()?,
-      "http://localhost:5173".parse::<HeaderValue>()?,
-      "http://localhost:8080".parse::<HeaderValue>()?,
-      "http://localhost:8000".parse::<HeaderValue>()?,
-    ]);
+    .expose_headers([AUTHORIZATION]);
+
+  let cors = if config.http.allow_origins.is_empty() {
+    cors.allow_origin(Any)
+  } else {
+    let iter = config
+      .http
+      .allow_origins
+      .iter()
+      .map(|e| e.parse::<HeaderValue>());
+    let origins: Vec<_> = itertools::process_results(iter, |iter| iter.collect())?;
+    cors.allow_origin(origins)
+  };
 
   let app = app.layer(cors);
 
-  let tls = RustlsConfig::from_pem_file(config.cert.pem, config.cert.key).await?;
-  let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
+  let tls = RustlsConfig::from_pem_file(config.http.tls.pem, config.http.tls.key).await?;
+  let addr = SocketAddr::from(([0, 0, 0, 0], config.http.port));
   log::info!("listening on {}", addr);
 
-  axum_server::bind_rustls(addr, tls)
+  let server = axum_server::bind_rustls(addr, tls)
     .serve(app.into_make_service())
-    .await?;
+    .map_err(|err| Error::InternalServerError(Box::new(err)));
+
+  futures::try_join!(splatnet, server)?;
 
   Ok(())
 }

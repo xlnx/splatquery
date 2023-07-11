@@ -7,11 +7,9 @@ use crate::{action::config::ActionAgentsConfig, splatnet::SplatNetConfig, Result
 
 use super::auth::AuthAgentMap;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct Config {
-  #[serde(default = "default_port")]
-  pub port: u16,
-  pub cert: CertConfig,
+  pub http: HttpConfig,
   pub database: DatabaseConfig,
   #[serde(default)]
   pub splatnet: SplatNetConfig,
@@ -20,30 +18,39 @@ pub struct Config {
   pub actions: ActionAgentsConfig,
 }
 
+#[derive(Deserialize)]
+pub struct HttpConfig {
+  #[serde(default = "default_port")]
+  pub port: u16,
+  pub tls: TlsConfig,
+  #[serde(default)]
+  pub allow_origins: Vec<String>,
+}
+
 fn default_port() -> u16 {
   443
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct CertConfig {
+#[derive(Deserialize)]
+pub struct TlsConfig {
   pub pem: String,
   pub key: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct AuthConfig {
   #[serde(default)]
   pub agents: AuthAgentsConfig,
   pub token: TokenConfig,
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Deserialize, Default)]
 pub struct AuthAgentsConfig {
   #[cfg(feature = "api-auth-google")]
   pub google: Option<crate::api::auth::google::GoogleAuthAgent>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct TokenConfig {
   #[serde(default = "default_token_algorithm")]
   pub algorithm: Algorithm,
@@ -52,7 +59,7 @@ pub struct TokenConfig {
   pub expire_days: i64,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct DatabaseConfig {
   pub path: String,
 }

@@ -93,7 +93,7 @@ pub enum Message {
   PVP(PVPSpiderItem),
 }
 
-pub struct SplatNet {
+pub struct SplatNetAgent {
   database: Database,
   actions: Arc<ActionAgentMap>,
   gear_update_interval: Duration,
@@ -101,13 +101,13 @@ pub struct SplatNet {
   state: RwLock<Spider>,
 }
 
-impl SplatNet {
+impl SplatNetAgent {
   pub fn new(
     database: Database,
     actions: Arc<ActionAgentMap>,
     config: SplatNetConfig,
   ) -> Arc<Self> {
-    Arc::new(SplatNet {
+    Arc::new(SplatNetAgent {
       database,
       actions,
       gear_update_interval: chrono::Duration::minutes(config.update_interval_mins.gears)
@@ -120,7 +120,7 @@ impl SplatNet {
     })
   }
 
-  pub fn watch(self: Arc<Self>) -> impl Future<Output = ()> {
+  pub async fn watch(self: Arc<Self>) -> Result<(), BoxError> {
     let update_gear = {
       let mut timer = IntervalStream::new(tokio::time::interval(self.gear_update_interval));
       let this = self.clone();
@@ -168,9 +168,8 @@ impl SplatNet {
         }
       }
     };
-    let tasks: [Pin<Box<dyn Future<Output = ()> + Send>>; 2] =
-      [Box::pin(update_gear), Box::pin(update_schedules)];
-    join_all(tasks).map(|_| ())
+    futures::join!(update_gear, update_schedules);
+    Ok(())
   }
 
   fn handle_error(&self, err: BoxError) {

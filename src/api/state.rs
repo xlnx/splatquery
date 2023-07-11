@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::FromRef;
 use chrono::Duration;
 
-use crate::{action::ActionAgentMap, database::Database, splatnet::SplatNet};
+use crate::{action::ActionAgentMap, database::Database};
 
 use super::{auth::AuthAgentMap, jwt};
 
@@ -11,18 +11,11 @@ use super::{auth::AuthAgentMap, jwt};
 pub struct AppState(pub Arc<InnerAppState>);
 
 pub struct InnerAppState {
-  pub splatnet: Arc<SplatNet>,
   pub db: Database,
   pub jwt: jwt::Agent,
   pub auths: Arc<AuthAgentMap>,
   pub actions: Arc<ActionAgentMap>,
   pub auth_expiration: Duration,
-}
-
-impl FromRef<AppState> for Arc<SplatNet> {
-  fn from_ref(input: &AppState) -> Self {
-    input.0.splatnet.clone()
-  }
 }
 
 impl FromRef<AppState> for Database {
