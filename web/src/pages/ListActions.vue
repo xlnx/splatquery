@@ -1,11 +1,11 @@
 <template>
-  <div class="grid grid-flow-row-dense grid-cols-1 lg:grid-cols-2" v-if="!!response">
+  <div class="grid grid-flow-row-dense grid-cols-1 lg:grid-cols-2" v-if="!!actions">
     <div class="m-2 sm:m-3 lg:m-4">
-      <WebPushActionCard :defaultActive="active.webpush" :defaultConfig="response.webpush" />
+      <WebPushActionCard :defaultActive="actions.webpush.active" :defaultConfig="actions.webpush.sub" />
     </div>
   </div>
 
-  <div v-if="!response && !failed">
+  <div v-if="!actions && !failed">
     <Loading />
   </div>
 
@@ -25,13 +25,12 @@ import WebPushActionCard from '../components/WebPushActionCard.vue';
 
 onMounted(initFlowbite);
 
-const response = ref();
-const active = ref({});
+const actions = ref();
 const failed = ref();
 
 onMounted(async () => {
   try {
-    response.value = await backOff(async () => {
+    const li = await backOff(async () => {
       const response = await axios.get(import.meta.env.VITE_API_SERVER + '/action/list');
       if (response.status != 200) {
         throw response;
@@ -40,9 +39,18 @@ onMounted(async () => {
     }, {
       numOfAttempts: 5,
     });
-    for (let action of response.value.actions) {
-      active.value[action] = true;
+    const map = {};
+    for (let { id, agent, active, ext_info } of li) {
+      if (!(agent in map)) {
+        map[agent] = { active, sub: [] };
+      }
+      map[agent].sub.push({ id, ...ext_info });
     }
+    actions.value = {
+      webpush: { sub: [] },
+      ...map,
+    }
+    console.log(JSON.parse(JSON.stringify(actions.value)));
   } catch (err) {
     console.error(err);
     failed.value = true;

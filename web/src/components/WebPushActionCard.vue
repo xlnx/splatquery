@@ -90,7 +90,7 @@ const subscribeImpl = async () => {
     // device: ua.device.name,
   }
   // submit agent to server
-  await backOff(async () => {
+  let id = await backOff(async () => {
     const response = await axios.post(import.meta.env.VITE_API_SERVER + '/action/webpush/subscribe', agent)
     if (response.status != 200) {
       throw response;
@@ -102,13 +102,13 @@ const subscribeImpl = async () => {
   // update ui
   delete agent.p256dh;
   delete agent.auth;
-  agents.value.push(agent);
+  agents.value.push({ id, ...agent });
 }
 
-const dismissImpl = async ({ endpoint }) => {
+const dismissImpl = async ({ id }) => {
   // submit agent to server
   await backOff(async () => {
-    const response = await axios.post(import.meta.env.VITE_API_SERVER + '/action/webpush/dismiss', { endpoint })
+    const response = await axios.post(import.meta.env.VITE_API_SERVER + `/action/delete?id=${id}`)
     if (response.status != 200) {
       throw response;
     }
@@ -117,7 +117,7 @@ const dismissImpl = async ({ endpoint }) => {
     numOfAttempts: 5,
   });
   // update ui
-  const idx = agents.value.findIndex(e => e.endpoint == endpoint);
+  const idx = agents.value.findIndex(e => e.id == id);
   if (idx >= 0) {
     agents.value.splice(idx, 1);
   }
