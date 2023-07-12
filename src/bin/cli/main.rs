@@ -3,13 +3,10 @@ use std::{collections::HashMap, fs::File, io::BufReader};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use splatquery::{
-  action::config::ActionAgentsConfig,
+  action::{config::ActionAgentsConfig, ActionManager},
   database::{
     query::{CreateQuery, CreateQueryRequest, QueryConfig},
-    user::{
-      CreateUser, CreateUserRequest, LookupUser, LookupUserRequest, UpdateUserAction,
-      UpdateUserActionRequest,
-    },
+    user::{CreateUser, CreateUserRequest, LookupUser, LookupUserRequest},
     Database,
   },
   splatnet::{SplatNetAgent, SplatNetConfig},
@@ -46,18 +43,17 @@ async fn main() -> Result<(), BoxError> {
   let reader = BufReader::new(file);
   let config: Config = serde_json::from_reader(reader)?;
 
-  // prepare action agents
-  let agents = config.agents.collect()?;
-  log::debug!("agents = {:?}", agents);
-
   // prepare database agent
   let db = Database::new_in_memory()?;
-  let mut conn = db.get()?;
+
+  // prepare action agents
+  let actions = ActionManager::new(db.clone(), config.agents.collect()?);
 
   // prepare splatnet agent
-  let splatnet = SplatNetAgent::new(db.clone(), agents, config.splatnet);
+  let splatnet = SplatNetAgent::new(actions, config.splatnet);
 
   // prepare user
+  let mut conn = db.get()?;
   let auth_agent = "";
   let auth_uid = "";
   let ok = conn.create_user(CreateUserRequest {
@@ -74,12 +70,13 @@ async fn main() -> Result<(), BoxError> {
   })?;
 
   // prepare use actions
-  for (agent, config) in config.actions.iter() {
-    conn.update_user_action(UpdateUserActionRequest {
-      uid,
-      act_agent: &agent,
-    })?;
-  }
+  // FIXME: ..
+  // for (agent, config) in config.actions.iter() {
+  //   conn.update_user_action(UpdateUserActionRequest {
+  //     uid,
+  //     act_agent: &agent,
+  //   })?;
+  // }
 
   // prepare user queries
   if config.queries.is_empty() {

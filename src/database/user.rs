@@ -1,4 +1,6 @@
-use rusqlite::{Connection, Result};
+use rusqlite::Connection;
+
+use crate::{Error, Result};
 
 #[derive(Debug)]
 pub struct CreateUserRequest<'a> {
@@ -21,16 +23,6 @@ pub struct LookupUserRequest<'a> {
 
 pub trait LookupUser {
   fn lookup_user(&self, request: LookupUserRequest) -> Result<i64>;
-}
-
-#[derive(Debug)]
-pub struct UpdateUserActionRequest<'a> {
-  pub uid: i64,
-  pub act_agent: &'a str,
-}
-
-pub trait UpdateUserAction {
-  fn update_user_action(&self, request: UpdateUserActionRequest) -> Result<()>;
 }
 
 impl CreateUser for Connection {
@@ -65,21 +57,10 @@ impl LookupUser for Connection {
         ",
       )?
       .query_row((&request.auth_uid, &request.auth_agent), |row| row.get(0))
-  }
-}
-
-impl UpdateUserAction for Connection {
-  fn update_user_action(&self, request: UpdateUserActionRequest) -> Result<()> {
-    self
-      .prepare_cached(
-        "
-        INSERT OR REPLACE
-        INTO user_actions ( uid, act_agent, act_active )
-        VALUES ( ?1, ?2, 1 )
-        ",
-      )?
-      .execute((&request.uid, &request.act_agent))?;
-    Ok(())
+      .map_err(|err| match err {
+        rusqlite::Error::QueryReturnedNoRows => Error::Unauthorized,
+        _ => Error::SqliteError(err),
+      })
   }
 }
 
@@ -131,11 +112,6 @@ mod tests {
         auth_agent,
         auth_uid: "u1",
       })
-      .unwrap();
-
-    let act_agent = "mock_act_agent";
-    conn
-      .update_user_action(UpdateUserActionRequest { uid, act_agent })
       .unwrap();
   }
 }

@@ -12,6 +12,7 @@ use serde_json::json;
 use tower_http::cors::{Any, CorsLayer};
 
 use splatquery::{
+  action::ActionManager,
   api::{
     self,
     config::Config,
@@ -38,21 +39,21 @@ async fn main() -> Result<(), BoxError> {
   let reader = BufReader::new(file);
   let config: Config = serde_json::from_reader(reader)?;
 
+  // prepare database agent
+  let db = Database::new_from_file(config.database.path)?;
+
   // prepare action agents
-  let actions = config.actions.collect()?;
+  let actions = ActionManager::new(db.clone(), config.actions.collect()?);
 
   // prepare auth agents
   let auths = config.auth.agents.collect()?;
-
-  // prepare database agent
-  let db = Database::new_from_file(config.database.path)?;
 
   // prepare jwt agent
   let jwt = jwt::Agent::new(config.auth.token.algorithm, &config.auth.token.secret);
   let auth_expiration = Duration::days(config.auth.token.expire_days);
 
   // prepare splatnet agent
-  let splatnet = SplatNetAgent::new(db.clone(), actions.clone(), config.splatnet)
+  let splatnet = SplatNetAgent::new(actions.clone(), config.splatnet)
     .watch()
     .map_err(|err| Error::InternalServerError(err));
 
@@ -75,15 +76,15 @@ async fn main() -> Result<(), BoxError> {
     // action apis
     .route("/action/:agent/toggle", post(api::action::toggle))
     .route("/action/list", get(api::action::list))
+    .route("/action/delete", post(api::action::delete))
     // auth apis
     .route("/auth/:agent", post(api::auth::oauth2));
 
   #[cfg(feature = "webpush")]
-  use api::action::webpush;
-  #[cfg(feature = "webpush")]
-  let app = app
-    .route("/action/webpush/subscribe", post(webpush::subscribe))
-    .route("/action/webpush/dismiss", post(webpush::dismiss));
+  let app = app.route(
+    "/action/webpush/subscribe",
+    post(api::action::webpush::subscribe),
+  );
 
   let app = app.with_state(state);
 

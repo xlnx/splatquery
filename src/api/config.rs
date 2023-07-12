@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use jsonwebtoken::Algorithm;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::{action::config::ActionAgentsConfig, splatnet::SplatNetConfig, Result};
 

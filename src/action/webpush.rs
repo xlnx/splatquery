@@ -2,7 +2,7 @@ use std::{fs::File, sync::Arc};
 
 use async_trait::async_trait;
 use chrono::{DateTime, FixedOffset};
-use rusqlite::Connection;
+use rusqlite::{Connection, Transaction};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use web_push::{
@@ -11,7 +11,7 @@ use web_push::{
 };
 
 use crate::{
-  database::Database,
+  database::{action::CreateAction, Database},
   splatnet::{
     i18n::{EnUs, I18N},
     Message, PVPRule,
@@ -44,6 +44,14 @@ impl WebPushActionAgentConfig {
   }
 }
 
+#[derive(Serialize)]
+pub struct WebPushExtInfo {
+  pub endpoint: String,
+  pub browser: Option<String>,
+  pub device: Option<String>,
+  pub os: Option<String>,
+}
+
 pub struct WebPushActionAgent {
   vapid: PartialVapidSignatureBuilder,
   client: WebPushClient,
@@ -57,36 +65,50 @@ impl std::fmt::Debug for WebPushActionAgent {
 
 #[async_trait]
 impl ActionAgent for WebPushActionAgent {
-  async fn send(self: Arc<Self>, db: Database, msg: Message, uids: &[i64]) -> Result<()> {
-    let mut subs = Vec::new();
-    {
+  fn get_ext_info(
+    &self,
+    conn: &Connection,
+    id: i64,
+  ) -> Result<Option<Box<dyn erased_serde::Serialize>>> {
+    let mut stmt = conn.prepare_cached(
+      "
+      SELECT endpoint, browser, device, os
+      FROM webpush_ext_info
+      WHERE id = ?1
+      ",
+    )?;
+    let info = stmt.query_row((&id,), |row| {
+      Ok(WebPushExtInfo {
+        endpoint: row.get(0)?,
+        browser: row.get(1)?,
+        device: row.get(2)?,
+        os: row.get(3)?,
+      })
+    })?;
+    Ok(Some(Box::new(info)))
+  }
+
+  async fn emit(self: Arc<Self>, db: Database, id: i64, msg: Arc<Message>) -> Result<()> {
+    let sub = {
       let conn = db.get()?;
       let mut stmt = conn.prepare_cached(
         "
-        SELECT endpoint, p256dh, auth 
-        FROM action_webpush
-        WHERE uid = ?1
-        ",
+          SELECT endpoint, p256dh, auth 
+          FROM webpush_ext_info
+          WHERE id = ?1
+          ",
       )?;
-      for uid in uids.iter() {
-        let iter = stmt.query_map((&uid,), |row| {
-          Ok(SubscriptionInfo {
-            endpoint: row.get(0)?,
-            keys: SubscriptionKeys {
-              p256dh: row.get(1)?,
-              auth: row.get(2)?,
-            },
-          })
-        })?;
-        for sub in iter {
-          subs.push(sub?);
-        }
-      }
-    }
-    if subs.is_empty() {
-      return Ok(());
-    }
-    let payload = match msg {
+      stmt.query_row((&id,), |row| {
+        Ok(SubscriptionInfo {
+          endpoint: row.get(0)?,
+          keys: SubscriptionKeys {
+            p256dh: row.get(1)?,
+            auth: row.get(2)?,
+          },
+        })
+      })?
+    };
+    let payload = match msg.as_ref() {
       Message::PVP(item) => {
         let i18n = EnUs();
         let mode = i18n.get_pvp_mode_name(item.mode);
@@ -113,15 +135,7 @@ impl ActionAgent for WebPushActionAgent {
         .map_err(|err| Error::InternalServerError(Box::new(err)))?
       }
     };
-    for sub in subs.into_iter() {
-      self.send_one(&payload, &sub).await?;
-    }
-    Ok(())
-  }
-}
 
-impl WebPushActionAgent {
-  async fn send_one(&self, payload: &[u8], sub: &SubscriptionInfo) -> Result<()> {
     let vapid = self
       .vapid
       .clone()
@@ -159,11 +173,12 @@ pub struct WebPushSubscribeRequest {
 }
 
 pub trait WebPushSubscribe {
-  fn webpush_subscribe(&self, uid: i64, request: WebPushSubscribeRequest) -> Result<()>;
+  fn webpush_subscribe(&self, uid: i64, request: WebPushSubscribeRequest) -> Result<i64>;
 }
 
-impl WebPushSubscribe for Connection {
-  fn webpush_subscribe(&self, uid: i64, request: WebPushSubscribeRequest) -> Result<()> {
+impl<'a> WebPushSubscribe for Transaction<'a> {
+  fn webpush_subscribe(&self, uid: i64, request: WebPushSubscribeRequest) -> Result<i64> {
+    let id = self.create_action(uid, "webpush")?;
     let WebPushSubscribeRequest {
       sub,
       browser,
@@ -172,11 +187,12 @@ impl WebPushSubscribe for Connection {
     } = request;
     let mut stmt = self.prepare_cached(
       "
-      INSERT INTO action_webpush ( uid, endpoint, p256dh, auth, browser, device, os )
-      VALUES ( ?1, ?2, ?3, ?4, ?5, ?6, ?7 )
+      INSERT INTO webpush_ext_info ( id, uid, endpoint, p256dh, auth, browser, device, os )
+      VALUES ( ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8 )
       ",
     )?;
     let n = stmt.execute((
+      &id,
       &uid,
       &sub.endpoint,
       &sub.keys.p256dh,
@@ -188,68 +204,7 @@ impl WebPushSubscribe for Connection {
     if n == 0 {
       Err(Error::SqliteError(rusqlite::Error::QueryReturnedNoRows))
     } else {
-      Ok(())
+      Ok(id)
     }
-  }
-}
-
-#[derive(Deserialize)]
-pub struct WebPushDismissRequest {
-  pub endpoint: String,
-}
-
-pub trait WebPushDismiss {
-  fn webpush_dismiss(&self, uid: i64, request: WebPushDismissRequest) -> Result<()>;
-}
-
-impl WebPushDismiss for Connection {
-  fn webpush_dismiss(&self, uid: i64, request: WebPushDismissRequest) -> Result<()> {
-    let WebPushDismissRequest { endpoint } = request;
-    let mut stmt = self.prepare_cached(
-      "
-      DELETE FROM action_webpush
-      WHERE uid = ?1 AND endpoint = ?2
-      ",
-    )?;
-    let n = stmt.execute((&uid, &endpoint))?;
-    if n == 0 {
-      Err(Error::SqliteError(rusqlite::Error::QueryReturnedNoRows))
-    } else {
-      Ok(())
-    }
-  }
-}
-
-#[derive(Serialize)]
-pub struct WebPushListResponse {
-  pub endpoint: String,
-  pub browser: Option<String>,
-  pub device: Option<String>,
-  pub os: Option<String>,
-}
-
-pub trait WebPushList {
-  fn webpush_list(&self, uid: i64) -> Result<Vec<WebPushListResponse>>;
-}
-
-impl WebPushList for Connection {
-  fn webpush_list(&self, uid: i64) -> Result<Vec<WebPushListResponse>> {
-    let mut stmt = self.prepare_cached(
-      "
-      SELECT endpoint, browser, device, os
-      FROM action_webpush
-      WHERE uid = ?1
-      ",
-    )?;
-    let iter = stmt.query_map((&uid,), |row| {
-      Ok(WebPushListResponse {
-        endpoint: row.get(0)?,
-        browser: row.get(1)?,
-        device: row.get(2)?,
-        os: row.get(3)?,
-      })
-    })?;
-    let li = itertools::process_results(iter, |iter| iter.collect())?;
-    Ok(li)
   }
 }

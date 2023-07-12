@@ -14,7 +14,7 @@ pub struct ActionAgentsConfig {
 }
 
 impl ActionAgentsConfig {
-  pub fn collect(self) -> Result<Arc<ActionAgentMap>> {
+  pub fn collect(self) -> Result<ActionAgentMap> {
     let mut actions = ActionAgentMap::new();
     if let Some(agent) = self.infolog {
       actions.insert("infolog", Arc::new(agent));
@@ -26,6 +26,6 @@ impl ActionAgentsConfig {
     if actions.is_empty() {
       log::warn!("at least one agent agent should be specified");
     }
-    Ok(Arc::new(actions))
+    Ok(actions)
   }
 }

@@ -32,7 +32,6 @@ pub enum Error {
   #[error("invalid parameter")]
   InvalidParameter(&'static str, String),
 
-  #[cfg(feature = "api")]
   #[error("unauthorized")]
   Unauthorized,
 }
@@ -86,7 +85,7 @@ impl IntoResponse for Error {
       }
       Self::Unauthorized => {
         log::debug!("unauthorized");
-        StatusCode::BAD_REQUEST
+        StatusCode::UNAUTHORIZED
       }
     };
     code.into_response()

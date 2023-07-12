@@ -1,20 +1,12 @@
-use chrono::DateTime;
 use derivative::Derivative;
 use futures::{future::join_all, Future, FutureExt};
 use serde::{Deserialize, Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
-use std::{collections::HashMap, pin::Pin, sync::Arc, time::Duration};
+use std::{pin::Pin, sync::Arc, time::Duration};
 use tokio::sync::RwLock;
 use tokio_stream::{wrappers::IntervalStream, StreamExt};
 
-use crate::{
-  action::ActionAgentMap,
-  database::{
-    pvp::{LookupPVP, LookupPVPRequest},
-    Database,
-  },
-  BoxError,
-};
+use crate::{action::ActionManager, BoxError};
 
 use self::spider::{CoopSpiderItem, GearSpiderItem, PVPSpiderItem, Spider};
 
@@ -94,21 +86,15 @@ pub enum Message {
 }
 
 pub struct SplatNetAgent {
-  database: Database,
-  actions: Arc<ActionAgentMap>,
+  actions: ActionManager,
   gear_update_interval: Duration,
   schedules_update_interval: Duration,
   state: RwLock<Spider>,
 }
 
 impl SplatNetAgent {
-  pub fn new(
-    database: Database,
-    actions: Arc<ActionAgentMap>,
-    config: SplatNetConfig,
-  ) -> Arc<Self> {
+  pub fn new(actions: ActionManager, config: SplatNetConfig) -> Arc<Self> {
     Arc::new(SplatNetAgent {
-      database,
       actions,
       gear_update_interval: chrono::Duration::minutes(config.update_interval_mins.gears)
         .to_std()
@@ -181,51 +167,11 @@ impl SplatNetAgent {
   }
 
   async fn handle_pvp_update(&self, items: Vec<PVPSpiderItem>) -> Result<(), BoxError> {
+    let mut tasks = vec![];
     for item in items.into_iter() {
-      if let Err(err) = self.handle_pvp_update_1(item).await {
-        self.handle_error(err);
-      }
+      tasks.push(self.actions.dispatch(Message::PVP(item))?);
     }
-    Ok(())
-  }
-
-  async fn handle_pvp_update_1(&self, item: PVPSpiderItem) -> Result<(), BoxError> {
-    let conn = self.database.get()?;
-    let start_time = DateTime::parse_from_rfc3339(&item.start_time)?;
-    let rule = PVPRule::from_base64(&item.rule);
-    let actions = conn.lookup_pvp(LookupPVPRequest {
-      start_time: start_time.into(),
-      rule,
-      mode: item.mode,
-      stages: &item.stages,
-    })?;
-    if actions.len() == 0 {
-      return Ok(());
-    }
-    let mut dispatch = HashMap::new();
-    for action in actions.into_iter() {
-      dispatch
-        .entry(&action.act_agent)
-        .or_insert_with(|| vec![])
-        .push(action.uid);
-    }
-    for (act_agent, uids) in dispatch.into_iter() {
-      let agent = self
-        .actions
-        .get(act_agent.as_str())
-        .ok_or_else(|| Error::Message(format!("action agent [{}] is not registered", act_agent)))?
-        .clone();
-      tokio::spawn({
-        let act_agent = act_agent.clone();
-        let db = self.database.clone();
-        let msg = Message::PVP(item.clone());
-        async move {
-          if let Err(err) = agent.send(db, msg, uids.as_slice()).await {
-            log::error!("action [{}] failed with error: [{:?}]", act_agent, err);
-          }
-        }
-      });
-    }
+    join_all(tasks).await;
     Ok(())
   }
 

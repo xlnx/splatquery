@@ -36,6 +36,7 @@ impl Deref for Database {
 }
 
 fn do_init(conn: &mut Connection) -> Result<(), rusqlite::Error> {
+  conn.execute("PRAGMA foreign_keys = ON", ())?;
   conn.execute_batch(
     "BEGIN;
   
@@ -67,7 +68,8 @@ fn do_init(conn: &mut Connection) -> Result<(), rusqlite::Error> {
     ON pvp_queries ( uid );
 
     CREATE TABLE IF NOT EXISTS
-    user_actions (
+    user_action_agents (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
       uid                 INTEGER NOT NULL,
       act_agent           TEXT NOT NULL,
       act_active          TINYINT NOT NULL,
@@ -75,8 +77,20 @@ fn do_init(conn: &mut Connection) -> Result<(), rusqlite::Error> {
       UNIQUE ( uid, act_agent )
     );
 
+    CREATE INDEX IF NOT EXISTS user_action_agents_index
+    ON user_action_agents ( uid );
+
     CREATE TABLE IF NOT EXISTS
-    action_webpush (
+    user_actions (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      uid                 INTEGER NOT NULL,
+      aid                 INTEGER NOT NULL,
+      FOREIGN KEY ( aid ) REFERENCES user_action_agents ( id ) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS
+    webpush_ext_info (
+      id                  INTEGER UNIQUE NOT NULL,
       uid                 INTEGER NOT NULL,
       endpoint            TEXT NOT NULL,
       p256dh              TEXT NOT NULL,
@@ -84,8 +98,8 @@ fn do_init(conn: &mut Connection) -> Result<(), rusqlite::Error> {
       browser             TEXT,
       device              TEXT,
       os                  TEXT,
-      FOREIGN KEY ( uid ) REFERENCES users ( id ) ON DELETE CASCADE,
-      UNIQUE ( endpoint )
+      FOREIGN KEY ( id ) REFERENCES user_actions ( id ) ON DELETE CASCADE,
+      UNIQUE ( endpoint, uid )
     );
 
     COMMIT;",

@@ -1,8 +1,6 @@
-#[cfg(feature = "webpush")]
-use crate::action::webpush::{WebPushList, WebPushListResponse};
 use crate::{
   database::{
-    action::{ListAction, ToggleAction, ToggleActionRequest},
+    action::{DeleteAction, ListAction, ToggleAction},
     user::{LookupUser, LookupUserRequest},
   },
   Error, Result,
@@ -11,7 +9,7 @@ use axum::{
   extract::{Path, Query, State},
   response::IntoResponse,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::{
   state::{AppState, InnerAppState},
@@ -21,29 +19,67 @@ use super::{
 #[cfg(feature = "webpush")]
 pub mod webpush;
 
-#[derive(Serialize, Default)]
+#[derive(Serialize)]
 pub struct ListResponse {
-  actions: Vec<String>,
-  #[cfg(feature = "webpush")]
-  webpush: Option<Vec<WebPushListResponse>>,
+  id: i64,
+  agent: String,
+  active: bool,
+  ext_info: Option<Box<dyn erased_serde::Serialize>>,
 }
 
 pub async fn list(User(user): User, State(state): State<AppState>) -> Result<impl IntoResponse> {
+  let InnerAppState { db, actions, .. } = state.0.as_ref();
+  let conn = db.get()?;
+  let uid = conn.lookup_user(LookupUserRequest {
+    auth_agent: &user.agent,
+    auth_uid: &user.id,
+  })?;
+  let mut li = vec![];
+  for e in conn.list_action(uid)? {
+    if let Some(agent) = actions.agents.get(e.agent.as_str()) {
+      match agent.get_ext_info(&conn, e.id) {
+        Ok(ext_info) => li.push(ListResponse {
+          id: e.id,
+          agent: e.agent.clone(),
+          active: e.active,
+          ext_info,
+        }),
+        Err(err) => log::warn!(
+          "get_ext_info [{}] for action [{}] error: [{:?}]",
+          e.agent,
+          e.id,
+          err
+        ),
+      }
+    }
+  }
+  let resp = serde_json::to_string(&li).map_err(|err| Error::InternalServerError(Box::new(err)))?;
+  Ok(resp)
+}
+
+#[derive(Deserialize)]
+pub struct DeleteActionRequest {
+  pub id: i64,
+}
+
+pub async fn delete(
+  User(user): User,
+  State(state): State<AppState>,
+  Query(request): Query<DeleteActionRequest>,
+) -> Result<()> {
   let InnerAppState { db, .. } = state.0.as_ref();
   let conn = db.get()?;
   let uid = conn.lookup_user(LookupUserRequest {
     auth_agent: &user.agent,
     auth_uid: &user.id,
   })?;
-  let mut resp = ListResponse::default();
-  resp.actions = conn.list_action(uid)?;
-  #[cfg(feature = "webpush")]
-  {
-    resp.webpush = Some(conn.webpush_list(uid)?);
-  }
-  let resp =
-    serde_json::to_string(&resp).map_err(|err| Error::InternalServerError(Box::new(err)))?;
-  Ok(resp)
+  conn.delete_action(uid, request.id)?;
+  Ok(())
+}
+
+#[derive(Deserialize)]
+pub struct ToggleActionRequest {
+  pub active: bool,
 }
 
 pub async fn toggle(
@@ -58,6 +94,6 @@ pub async fn toggle(
     auth_agent: &user.agent,
     auth_uid: &user.id,
   })?;
-  conn.toggle_action(uid, &agent, request)?;
+  conn.toggle_action(uid, &agent, request.active)?;
   Ok(())
 }

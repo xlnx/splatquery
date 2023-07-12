@@ -37,11 +37,10 @@ pub struct LookupPVPRequest<'a> {
   pub stages: &'a [u32],
 }
 
-#[derive(Debug, PartialEq, Eq)]
 pub struct LookupPVPResponse {
+  pub id: i64,
   pub uid: i64,
-  pub qid: i64,
-  pub act_agent: String,
+  pub agent: String,
 }
 
 pub trait LookupPVP {
@@ -119,21 +118,22 @@ impl LookupPVP for Connection {
     let stages = fold_stage_mask(request.stages);
     let mut stmt = self.prepare_cached(
       "
-      SELECT uid, id, act_agent
+      SELECT user_actions.id, uid_1, act_agent
       FROM (
-        SELECT uid as uid_1, id
+        SELECT uid as uid_1
         FROM pvp_queries 
         WHERE modes & ?1 AND rules & ?2 AND includes & ?3 AND NOT (excludes & ?3)
-      ) INNER JOIN user_actions 
-        ON uid_1 == user_actions.uid
+      ) 
+        INNER JOIN user_action_agents ON uid_1 == user_action_agents.uid
+        INNER JOIN user_actions ON aid == user_action_agents.id
       WHERE act_active
       ",
     )?;
     let iter = stmt.query_map((&mode, &rule, &stages), |row| {
       Ok(LookupPVPResponse {
-        uid: row.get(0)?,
-        qid: row.get(1)?,
-        act_agent: row.get(2)?,
+        id: row.get(0)?,
+        uid: row.get(1)?,
+        agent: row.get(2)?,
       })
     })?;
     let list = itertools::process_results(iter, |iter| iter.collect())?;
@@ -222,14 +222,12 @@ impl DeletePVPQuery for Connection {
 mod tests {
   use crate::{
     database::{
+      action::CreateAction,
       query::{
         CreateQuery, CreateQueryRequest, PVPQueryConfig, QueryConfig, UpdateQuery,
         UpdateQueryRequest,
       },
-      user::{
-        CreateUser, CreateUserRequest, LookupUser, LookupUserRequest, UpdateUserAction,
-        UpdateUserActionRequest,
-      },
+      user::{CreateUser, CreateUserRequest, LookupUser, LookupUserRequest},
       Database,
     },
     splatnet::PVPMode,
@@ -295,9 +293,9 @@ mod tests {
     assert_eq!(li.len(), 0);
 
     let act_agent = "mock_act_agent";
-    conn
-      .update_user_action(UpdateUserActionRequest { uid, act_agent })
-      .unwrap();
+    let tx = conn.transaction().unwrap();
+    let id = tx.create_action(uid, act_agent).unwrap();
+    tx.commit().unwrap();
 
     let li = conn
       .lookup_pvp(LookupPVPRequest {
@@ -308,14 +306,10 @@ mod tests {
       })
       .unwrap();
     assert_eq!(li.len(), 1);
-    assert_eq!(
-      *li.get(0).unwrap(),
-      LookupPVPResponse {
-        uid: uid,
-        qid: qid,
-        act_agent: String::from(act_agent),
-      }
-    );
+    let e = li.get(0).unwrap();
+    assert_eq!(e.id, id);
+    assert_eq!(e.uid, uid);
+    assert_eq!(e.agent, act_agent);
 
     let li = conn
       .lookup_pvp(LookupPVPRequest {
