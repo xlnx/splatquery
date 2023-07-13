@@ -5,6 +5,8 @@ pub mod action;
 #[cfg(feature = "api")]
 pub mod api;
 pub mod database;
+#[cfg(feature = "image")]
+pub mod image;
 pub mod splatnet;
 
 pub type BoxError = Box<dyn std::error::Error + Send + Sync>;

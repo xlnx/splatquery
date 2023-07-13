@@ -9,10 +9,15 @@ use chrono::Duration;
 use futures::TryFutureExt;
 use http::{header::AUTHORIZATION, HeaderValue, Method};
 use serde_json::json;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::{
+  cors::{Any, CorsLayer},
+  services::ServeDir,
+};
 
+#[cfg(feature = "image")]
+use splatquery::image::ImageAgent;
 use splatquery::{
-  action::ActionManager,
+  action::{ActionContext, ActionManager},
   api::{
     self,
     config::Config,
@@ -21,8 +26,29 @@ use splatquery::{
   },
   database::Database,
   splatnet::SplatNetAgent,
-  BoxError, Error, Result,
+  BoxError, Error,
 };
+
+fn cors<S>(app: Router<S>, allow_origins: &[String]) -> Result<Router<S>, BoxError>
+where
+  S: Clone + Send + Sync + 'static,
+{
+  // add cors layer to the top
+  let cors = CorsLayer::new()
+    .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+    .allow_headers(Any)
+    .expose_headers([AUTHORIZATION]);
+
+  let cors = if allow_origins.is_empty() {
+    cors.allow_origin(Any)
+  } else {
+    let iter = allow_origins.iter().map(|e| e.parse::<HeaderValue>());
+    let origins: Vec<_> = itertools::process_results(iter, |iter| iter.collect())?;
+    cors.allow_origin(origins)
+  };
+
+  Ok(app.layer(cors))
+}
 
 #[tokio::main]
 async fn main() -> Result<(), BoxError> {
@@ -42,8 +68,24 @@ async fn main() -> Result<(), BoxError> {
   // prepare database agent
   let db = Database::new_from_file(config.database.path)?;
 
+  #[cfg(feature = "image")]
+  let image = ImageAgent::new(config.image)?;
+
   // prepare action agents
-  let actions = ActionManager::new(db.clone(), config.actions.collect()?);
+  let actions = ActionManager::new(
+    ActionContext {
+      database: db.clone(),
+      #[cfg(feature = "image")]
+      image: image.clone(),
+      #[cfg(feature = "image")]
+      image_url: format!(
+        "https://{}:{}/_/image",
+        config.http.cname.unwrap(),
+        config.http.port,
+      ),
+    },
+    config.actions.collect()?,
+  );
 
   // prepare auth agents
   let auths = config.auth.agents.collect()?;
@@ -86,27 +128,11 @@ async fn main() -> Result<(), BoxError> {
     post(api::action::webpush::subscribe),
   );
 
-  let app = app.with_state(state);
-
   // add cors layer to the top
-  let cors = CorsLayer::new()
-    .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
-    .allow_headers(Any)
-    .expose_headers([AUTHORIZATION]);
+  let app = cors(app.with_state(state), &config.http.allow_origins)?;
 
-  let cors = if config.http.allow_origins.is_empty() {
-    cors.allow_origin(Any)
-  } else {
-    let iter = config
-      .http
-      .allow_origins
-      .iter()
-      .map(|e| e.parse::<HeaderValue>());
-    let origins: Vec<_> = itertools::process_results(iter, |iter| iter.collect())?;
-    cors.allow_origin(origins)
-  };
-
-  let app = app.layer(cors);
+  #[cfg(feature = "image")]
+  let app = app.nest_service("/_/image", ServeDir::new(image.out_dir()));
 
   let tls = RustlsConfig::from_pem_file(config.http.tls.pem, config.http.tls.key).await?;
   let addr = SocketAddr::from(([0, 0, 0, 0], config.http.port));

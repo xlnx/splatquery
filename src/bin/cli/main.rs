@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs::File, io::BufReader};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use splatquery::{
-  action::{config::ActionAgentsConfig, ActionManager},
+  action::{config::ActionAgentsConfig, ActionContext, ActionManager},
   database::{
     query::{CreateQuery, CreateQueryRequest, QueryConfig},
     user::{CreateUser, CreateUserRequest, LookupUser, LookupUserRequest},
@@ -47,7 +47,12 @@ async fn main() -> Result<(), BoxError> {
   let db = Database::new_in_memory()?;
 
   // prepare action agents
-  let actions = ActionManager::new(db.clone(), config.agents.collect()?);
+  let actions = ActionManager::new(
+    ActionContext {
+      database: db.clone(),
+    },
+    config.agents.collect()?,
+  );
 
   // prepare splatnet agent
   let splatnet = SplatNetAgent::new(actions, config.splatnet);

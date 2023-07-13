@@ -8,7 +8,8 @@ use tokio_stream::{wrappers::IntervalStream, StreamExt};
 
 use crate::{action::ActionManager, BoxError};
 
-use self::spider::{CoopSpiderItem, GearSpiderItem, PVPSpiderItem, Spider};
+use self::spider::Spider;
+pub use self::spider::{CoopSpiderItem, GearSpiderItem, PVPSpiderItem};
 
 mod gear;
 pub mod i18n;
@@ -34,6 +35,15 @@ pub enum PVPRule {
   Hoko = 8,
   Asari = 16,
   Unknown = 255,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str)]
+#[serde(rename_all = "lowercase")]
+pub enum Region {
+  US,
+  EU,
+  CN,
+  JP,
 }
 
 impl PVPRule {

@@ -6,6 +6,8 @@ use chrono::DateTime;
 use futures::{future::join_all, Future, FutureExt, TryFutureExt};
 use rusqlite::Connection;
 
+#[cfg(feature = "image")]
+use crate::image::ImageAgent;
 use crate::{
   database::{
     pvp::{LookupPVP, LookupPVPRequest},
@@ -32,25 +34,34 @@ pub trait ActionAgent: std::fmt::Debug + Send + Sync {
     Ok(None)
   }
 
-  async fn emit(self: Arc<Self>, db: Database, id: i64, msg: Arc<Message>) -> Result<()>;
+  async fn emit(self: Arc<Self>, ctx: Arc<ActionContext>, id: i64, msg: Arc<Message>)
+    -> Result<()>;
+}
+
+pub struct ActionContext {
+  pub database: Database,
+  #[cfg(feature = "image")]
+  pub image: Arc<ImageAgent>,
+  #[cfg(feature = "image")]
+  pub image_url: String,
 }
 
 #[derive(Clone)]
 pub struct ActionManager {
-  database: Database,
+  ctx: Arc<ActionContext>,
   pub agents: Arc<ActionAgentMap>,
 }
 
 impl ActionManager {
-  pub fn new(database: Database, agents: ActionAgentMap) -> Self {
+  pub fn new(ctx: ActionContext, agents: ActionAgentMap) -> Self {
     ActionManager {
-      database,
+      ctx: Arc::new(ctx),
       agents: Arc::new(agents),
     }
   }
 
   pub fn dispatch(&self, msg: Message) -> Result<impl Future<Output = ()>> {
-    let conn = self.database.get()?;
+    let conn = self.ctx.database.get()?;
     let actions = match &msg {
       Message::PVP(item) => {
         let start_time = DateTime::parse_from_rfc3339(&item.start_time)
@@ -74,7 +85,7 @@ impl ActionManager {
     for e in actions.iter() {
       if let Some(agent) = self.agents.get(e.agent.as_str()) {
         tasks.push(backoff::future::retry(exp.clone(), {
-          let db = self.database.clone();
+          let ctx = self.ctx.clone();
           let id = e.id;
           let uid = e.uid;
           let msg = msg.clone();
@@ -83,7 +94,7 @@ impl ActionManager {
           let mut attempt_idx = 0;
           move || {
             attempt_idx += 1;
-            agent.clone().emit(db.clone(), id, msg.clone()).map_err({
+            agent.clone().emit(ctx.clone(), id, msg.clone()).map_err({
               let agent = act_agent.clone();
               move |err| {
                 log::warn!(

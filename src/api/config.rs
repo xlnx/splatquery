@@ -3,6 +3,8 @@ use std::sync::Arc;
 use jsonwebtoken::Algorithm;
 use serde::Deserialize;
 
+#[cfg(feature = "image")]
+use crate::image::ImageAgentConfig;
 use crate::{action::config::ActionAgentsConfig, splatnet::SplatNetConfig, Result};
 
 use super::auth::AuthAgentMap;
@@ -16,6 +18,8 @@ pub struct Config {
   pub auth: AuthConfig,
   #[serde(default)]
   pub actions: ActionAgentsConfig,
+  #[cfg(feature = "image")]
+  pub image: ImageAgentConfig,
 }
 
 #[derive(Deserialize)]
@@ -25,6 +29,7 @@ pub struct HttpConfig {
   pub tls: TlsConfig,
   #[serde(default)]
   pub allow_origins: Vec<String>,
+  pub cname: Option<String>,
 }
 
 fn default_port() -> u16 {

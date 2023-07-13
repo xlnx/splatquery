@@ -11,15 +11,15 @@ use web_push::{
 };
 
 use crate::{
-  database::{action::CreateAction, Database},
+  database::action::CreateAction,
   splatnet::{
     i18n::{EnUs, I18N},
-    Message, PVPRule,
+    Message, PVPRule, Region,
   },
   Error, Result,
 };
 
-use super::ActionAgent;
+use super::{ActionAgent, ActionContext};
 
 #[derive(Serialize, Deserialize)]
 pub struct WebPushActionAgentConfig {
@@ -88,9 +88,14 @@ impl ActionAgent for WebPushActionAgent {
     Ok(Some(Box::new(info)))
   }
 
-  async fn emit(self: Arc<Self>, db: Database, id: i64, msg: Arc<Message>) -> Result<()> {
+  async fn emit(
+    self: Arc<Self>,
+    ctx: Arc<ActionContext>,
+    id: i64,
+    msg: Arc<Message>,
+  ) -> Result<()> {
     let sub = {
-      let conn = db.get()?;
+      let conn = ctx.database.get()?;
       let mut stmt = conn.prepare_cached(
         "
           SELECT endpoint, p256dh, auth 
@@ -124,10 +129,17 @@ impl ActionAgent for WebPushActionAgent {
         let timestamp = DateTime::parse_from_rfc3339(&item.start_time)
           .unwrap_or_else(|_| DateTime::<FixedOffset>::MAX_UTC.into())
           .timestamp_millis();
+        let img_path = ctx
+          .image
+          .render_pvp(item, "2-1", Region::JP)
+          .map_err(|err| Error::InternalServerError(err))?;
         serde_json::to_vec(&json!({
           "title": title,
           "options": {
             "body": body,
+            "image": format!("{}/{}", ctx.image_url, img_path),
+            "icon": "https://splatquery.koishi.top/logo.svg",
+            "silent": true,
             "tag": tag,
             "timestamp": timestamp,
           }
