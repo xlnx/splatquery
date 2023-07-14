@@ -23,6 +23,7 @@ pub enum PVPMode {
   Challenge = 2,
   Open = 4,
   X = 8,
+  Fest = 16,
   Unknown = 255,
 }
 

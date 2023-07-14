@@ -21,8 +21,15 @@ api = [
   "dep:jsonwebtoken",
 ]
 api-auth-google = ["api"]
-webpush = ["api", "image", "dep:web-push"]
-image = ["dep:resvg", "dep:ttl_cache", "dep:minijinja", "dep:walkdir"]
+webpush = ["api", "dep:web-push"]
+renderer = [
+  "dep:resvg",
+  "dep:ttl_cache",
+  "dep:minijinja",
+  "dep:walkdir",
+  "dep:image",
+]
+full = ["api", "api-auth-google", "webpush", "renderer"]
 
 [dependencies]
 appendlist = { git = "https://github.com/xlnx/appendlist.git" }
@@ -38,6 +45,9 @@ env_logger = "0.10.0"
 erased-serde = "0.3.27"
 futures = "0.3.28"
 http = { version = "0.2.9", optional = true }
+image = { version = "0.24.6", default-features = false, features = [
+  "jpeg",
+], optional = true }
 itertools = "0.11.0"
 jsonwebtoken = { version = "8.3.0", optional = true }
 log = "0.4.19"
@@ -46,7 +56,6 @@ r2d2 = "0.8.10"
 r2d2_sqlite = "0.22.0"
 reqwest = { version = "0.11.18", features = ["json"] }
 resvg = { version = "0.35.0", optional = true }
-rusqlite = "0.29.0"
 serde = { version = "1.0.164", features = ["derive"] }
 serde-enum-str = "0.3.2"
 serde_json = "1.0.97"
@@ -64,5 +73,8 @@ rustflags = ["-C", "link-arg=-fuse-ld=lld", "-C", "prefer-dynamic"]
 [profile.release]
 strip = "debuginfo"
 lto = true
+
+[profile.dev]
+debug = 0
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

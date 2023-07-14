@@ -5,8 +5,8 @@ pub mod action;
 #[cfg(feature = "api")]
 pub mod api;
 pub mod database;
-#[cfg(feature = "image")]
-pub mod image;
+#[cfg(feature = "renderer")]
+pub mod renderer;
 pub mod splatnet;
 
 pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
@@ -25,7 +25,7 @@ pub enum Error {
   R2D2Error(#[from] r2d2::Error),
 
   #[error("sqlite error")]
-  SqliteError(#[from] rusqlite::Error),
+  SqliteError(#[from] r2d2_sqlite::rusqlite::Error),
 
   #[cfg(feature = "api")]
   #[error("jwt error")]
@@ -56,7 +56,7 @@ impl IntoResponse for Error {
         StatusCode::REQUEST_TIMEOUT
       }
       Self::SqliteError(err) => {
-        use rusqlite::Error;
+        use r2d2_sqlite::rusqlite::Error;
         match err {
           Error::QueryReturnedNoRows => {
             log::debug!("entity not exist");

@@ -18,8 +18,10 @@ pub struct SchedulesData {
 
   #[serde(rename = "eventSchedules")]
   pub event_schedules: ScheduleList<EventSchedule>,
-  // #[serde(rename = "festSchedules")]
-  // pub fest_schedules: FestSchedules,
+
+  #[serde(rename = "festSchedules")]
+  pub fest_schedules: ScheduleList<PVPSchedule<FestMatchSetting>>,
+
   #[serde(rename = "coopGroupingSchedule")]
   pub coop_grouping_schedule: CoopGroupingSchedule,
   // #[serde(rename = "vsStages")]
@@ -29,19 +31,25 @@ pub struct SchedulesData {
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct RegularMatchSetting {
   #[serde(rename = "regularMatchSetting")]
-  pub regular_match_setting: PVPMatchSetting,
+  pub regular_match_setting: Option<PVPMatchSetting>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct BankaraMatchSetting {
   #[serde(rename = "bankaraMatchSettings")]
-  pub bankara_match_settings: (PVPMatchSetting, PVPMatchSetting),
+  pub bankara_match_settings: Option<(PVPMatchSetting, PVPMatchSetting)>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct XMatchSetting {
   #[serde(rename = "xMatchSetting")]
-  pub x_match_setting: PVPMatchSetting,
+  pub x_match_setting: Option<PVPMatchSetting>,
+}
+
+#[derive(Deserialize, PartialEq, Eq, Debug)]
+pub struct FestMatchSetting {
+  #[serde(rename = "festMatchSetting")]
+  pub fest_match_setting: Option<PVPMatchSetting>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
@@ -197,7 +205,7 @@ mod test {
           end_time: String::from("2023-06-15T18:00:00Z")
         },
         match_setting: XMatchSetting {
-          x_match_setting: PVPMatchSetting {
+          x_match_setting: Some(PVPMatchSetting {
             pvp_stages: vec![
               PVPStage {
                 id: String::from("VnNTdGFnZS0xNA=="),
@@ -215,7 +223,7 @@ mod test {
               rule: String::from("LOFT"),
               name: String::from("Tower Control")
             }
-          }
+          })
         }
       }
     );

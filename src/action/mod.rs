@@ -4,10 +4,10 @@ use async_trait::async_trait;
 use backoff::ExponentialBackoffBuilder;
 use chrono::DateTime;
 use futures::{future::join_all, Future, FutureExt, TryFutureExt};
-use rusqlite::Connection;
+use r2d2_sqlite::rusqlite::Connection;
 
-#[cfg(feature = "image")]
-use crate::image::ImageAgent;
+#[cfg(feature = "renderer")]
+use crate::renderer::Renderer;
 use crate::{
   database::{
     pvp::{LookupPVP, LookupPVPRequest},
@@ -40,9 +40,9 @@ pub trait ActionAgent: std::fmt::Debug + Send + Sync {
 
 pub struct ActionContext {
   pub database: Database,
-  #[cfg(feature = "image")]
-  pub image: Arc<ImageAgent>,
-  #[cfg(feature = "image")]
+  #[cfg(feature = "renderer")]
+  pub renderer: Arc<Renderer>,
+  #[cfg(feature = "renderer")]
   pub image_url: String,
 }
 

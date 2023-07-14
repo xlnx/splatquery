@@ -1,8 +1,7 @@
 use std::{ops::Deref, path::Path};
 
 use r2d2::Pool;
-use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::Connection;
+use r2d2_sqlite::{rusqlite::Connection, SqliteConnectionManager};
 
 use crate::Result;
 
@@ -35,7 +34,7 @@ impl Deref for Database {
   }
 }
 
-fn do_init(conn: &mut Connection) -> Result<(), rusqlite::Error> {
+fn do_init(conn: &mut Connection) -> Result<(), r2d2_sqlite::rusqlite::Error> {
   conn.execute("PRAGMA foreign_keys = ON", ())?;
   conn.execute_batch(
     "BEGIN;

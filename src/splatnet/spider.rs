@@ -156,6 +156,7 @@ impl Spider {
       regular_schedules,
       bankara_schedules,
       x_schedules,
+      fest_schedules,
       coop_grouping_schedule,
       ..
     } = response.data;
@@ -201,11 +202,9 @@ impl Spider {
         for s in regular_schedules.nodes.into_iter() {
           let t1 = DateTime::parse_from_rfc3339(&s.time_period.start_time)?;
           if t1 > t {
-            collect_pvp(
-              PVPMode::TurfWar,
-              s.time_period,
-              s.match_setting.regular_match_setting,
-            );
+            if let Some(setting) = s.match_setting.regular_match_setting {
+              collect_pvp(PVPMode::TurfWar, s.time_period, setting);
+            }
           }
         }
       }
@@ -220,16 +219,10 @@ impl Spider {
         for s in bankara_schedules.nodes.into_iter() {
           let t1 = DateTime::parse_from_rfc3339(&s.time_period.start_time)?;
           if t1 > t {
-            collect_pvp(
-              PVPMode::Challenge,
-              s.time_period.clone(),
-              s.match_setting.bankara_match_settings.0,
-            );
-            collect_pvp(
-              PVPMode::Open,
-              s.time_period,
-              s.match_setting.bankara_match_settings.1,
-            );
+            if let Some((challenge, open)) = s.match_setting.bankara_match_settings {
+              collect_pvp(PVPMode::Challenge, s.time_period.clone(), challenge);
+              collect_pvp(PVPMode::Open, s.time_period, open);
+            }
           }
         }
       }
@@ -244,7 +237,26 @@ impl Spider {
         for s in x_schedules.nodes.into_iter() {
           let t1 = DateTime::parse_from_rfc3339(&s.time_period.start_time)?;
           if t1 > t {
-            collect_pvp(PVPMode::X, s.time_period, s.match_setting.x_match_setting);
+            if let Some(setting) = s.match_setting.x_match_setting {
+              collect_pvp(PVPMode::X, s.time_period, setting);
+            }
+          }
+        }
+      }
+    }
+
+    if let Some(s) = fest_schedules.nodes.last() {
+      let mut t = DateTime::parse_from_rfc3339(&s.time_period.start_time)?.into();
+      if t > self.pvp_fest {
+        // find new x match schedule
+        std::mem::swap(&mut self.pvp_x_match, &mut t);
+        log::debug!("cursor.pvp_fest [{}] -> [{}]", t, self.pvp_fest);
+        for s in fest_schedules.nodes.into_iter() {
+          let t1 = DateTime::parse_from_rfc3339(&s.time_period.start_time)?;
+          if t1 > t {
+            if let Some(setting) = s.match_setting.fest_match_setting {
+              collect_pvp(PVPMode::Fest, s.time_period, setting);
+            }
           }
         }
       }

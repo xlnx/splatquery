@@ -1,4 +1,4 @@
-use rusqlite::Connection;
+use r2d2_sqlite::rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 

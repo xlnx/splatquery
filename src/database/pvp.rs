@@ -1,6 +1,6 @@
 use appendlist::AppendList;
 use chrono::{DateTime, Utc};
-use rusqlite::Connection;
+use r2d2_sqlite::rusqlite::Connection;
 
 use crate::{
   splatnet::{PVPMode, PVPRule},
@@ -104,7 +104,9 @@ impl CreatePVPQuery for Connection {
     )?;
     let n = stmt.execute((&uid, &modes, &rules, &includes, &excludes))?;
     if n != 1 {
-      Err(Error::SqliteError(rusqlite::Error::QueryReturnedNoRows))
+      Err(Error::SqliteError(
+        r2d2_sqlite::rusqlite::Error::QueryReturnedNoRows,
+      ))
     } else {
       Ok(self.last_insert_rowid())
     }
@@ -194,7 +196,9 @@ impl UpdatePVPQuery for Connection {
     )?;
     let n = stmt.execute((&uid, &qid, &modes, &rules, &includes, &excludes))?;
     if n != 1 {
-      Err(Error::SqliteError(rusqlite::Error::QueryReturnedNoRows))
+      Err(Error::SqliteError(
+        r2d2_sqlite::rusqlite::Error::QueryReturnedNoRows,
+      ))
     } else {
       Ok(())
     }
@@ -211,7 +215,9 @@ impl DeletePVPQuery for Connection {
     )?;
     let n = stmt.execute((&uid, &qid))?;
     if n != 1 {
-      Err(Error::SqliteError(rusqlite::Error::QueryReturnedNoRows))
+      Err(Error::SqliteError(
+        r2d2_sqlite::rusqlite::Error::QueryReturnedNoRows,
+      ))
     } else {
       Ok(())
     }

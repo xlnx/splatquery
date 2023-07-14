@@ -3,8 +3,8 @@ use std::sync::Arc;
 use jsonwebtoken::Algorithm;
 use serde::Deserialize;
 
-#[cfg(feature = "image")]
-use crate::image::ImageAgentConfig;
+#[cfg(feature = "renderer")]
+use crate::renderer::RendererConfig;
 use crate::{action::config::ActionAgentsConfig, splatnet::SplatNetConfig, Result};
 
 use super::auth::AuthAgentMap;
@@ -18,8 +18,8 @@ pub struct Config {
   pub auth: AuthConfig,
   #[serde(default)]
   pub actions: ActionAgentsConfig,
-  #[cfg(feature = "image")]
-  pub image: ImageAgentConfig,
+  #[cfg(feature = "renderer")]
+  pub renderer: RendererConfig,
 }
 
 #[derive(Deserialize)]

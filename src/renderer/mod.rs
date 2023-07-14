@@ -1,9 +1,12 @@
 use std::{
+  fs::File,
+  io::BufWriter,
   path::PathBuf,
   sync::{Arc, RwLock},
 };
 
 use chrono::Duration;
+use image::{codecs::jpeg::JpegEncoder, ColorType, ImageEncoder};
 use itertools::Itertools;
 use minijinja::{context, path_loader, Environment};
 use resvg::{
@@ -20,7 +23,7 @@ use crate::{
 };
 
 #[derive(Deserialize)]
-pub struct ImageAgentConfig {
+pub struct RendererConfig {
   pub out_dir: String,
   pub assets_dir: String,
   #[serde(default)]
@@ -33,7 +36,7 @@ fn default_cache_size() -> usize {
   1024
 }
 
-pub struct ImageAgent {
+pub struct Renderer {
   out_dir: PathBuf,
   svg_opts: Options,
   svg_tmpls: Environment<'static>,
@@ -41,8 +44,8 @@ pub struct ImageAgent {
   lookup: RwLock<TtlCache<String, String>>,
 }
 
-impl ImageAgent {
-  pub fn new(opts: ImageAgentConfig) -> Result<Arc<Self>, BoxError> {
+impl Renderer {
+  pub fn new(opts: RendererConfig) -> Result<Arc<Self>, BoxError> {
     let mut svg_opts = Options::default();
     svg_opts.resources_dir = Some(opts.assets_dir.clone().into());
     svg_opts.font_family = opts.font_family.into();
@@ -66,7 +69,7 @@ impl ImageAgent {
         }
       }
     }
-    Ok(Arc::new(ImageAgent {
+    Ok(Arc::new(Renderer {
       out_dir: opts.out_dir.into(),
       svg_opts,
       svg_tmpls,
@@ -123,8 +126,16 @@ impl ImageAgent {
       return Ok(path.clone());
     }
     let pixmap = self.do_render(tmpl, ctx())?;
-    let path = base64::encode_config(&key, base64::URL_SAFE_NO_PAD) + ".png";
-    pixmap.save_png(&self.out_dir.join(path.clone()))?;
+    let path = base64::encode_config(&key, base64::URL_SAFE_NO_PAD) + ".jpg";
+    let file = File::create(&self.out_dir.join(path.clone())).unwrap();
+    let buff = BufWriter::new(file);
+    let encoder = JpegEncoder::new(buff);
+    encoder.write_image(
+      pixmap.data(),
+      pixmap.width(),
+      pixmap.height(),
+      ColorType::Rgba8,
+    )?;
     let ttl = Duration::days(2).to_std()?;
     cache.insert(key, path.clone(), ttl);
     Ok(path)

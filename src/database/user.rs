@@ -1,4 +1,4 @@
-use rusqlite::Connection;
+use r2d2_sqlite::rusqlite::Connection;
 
 use crate::{Error, Result};
 
@@ -58,7 +58,7 @@ impl LookupUser for Connection {
       )?
       .query_row((&request.auth_uid, &request.auth_agent), |row| row.get(0))
       .map_err(|err| match err {
-        rusqlite::Error::QueryReturnedNoRows => Error::Unauthorized,
+        r2d2_sqlite::rusqlite::Error::QueryReturnedNoRows => Error::Unauthorized,
         _ => Error::SqliteError(err),
       })
   }

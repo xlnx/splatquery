@@ -14,8 +14,8 @@ use tower_http::{
   services::ServeDir,
 };
 
-#[cfg(feature = "image")]
-use splatquery::image::ImageAgent;
+#[cfg(feature = "renderer")]
+use splatquery::renderer::Renderer;
 use splatquery::{
   action::{ActionContext, ActionManager},
   api::{
@@ -68,16 +68,16 @@ async fn main() -> Result<(), BoxError> {
   // prepare database agent
   let db = Database::new_from_file(config.database.path)?;
 
-  #[cfg(feature = "image")]
-  let image = ImageAgent::new(config.image)?;
+  #[cfg(feature = "renderer")]
+  let renderer = Renderer::new(config.renderer)?;
 
   // prepare action agents
   let actions = ActionManager::new(
     ActionContext {
       database: db.clone(),
-      #[cfg(feature = "image")]
-      image: image.clone(),
-      #[cfg(feature = "image")]
+      #[cfg(feature = "renderer")]
+      renderer: renderer.clone(),
+      #[cfg(feature = "renderer")]
       image_url: format!(
         "https://{}:{}/_/image",
         config.http.cname.unwrap(),
@@ -131,8 +131,8 @@ async fn main() -> Result<(), BoxError> {
   // add cors layer to the top
   let app = cors(app.with_state(state), &config.http.allow_origins)?;
 
-  #[cfg(feature = "image")]
-  let app = app.nest_service("/_/image", ServeDir::new(image.out_dir()));
+  #[cfg(feature = "renderer")]
+  let app = app.nest_service("/_/image", ServeDir::new(renderer.out_dir()));
 
   let tls = RustlsConfig::from_pem_file(config.http.tls.pem, config.http.tls.key).await?;
   let addr = SocketAddr::from(([0, 0, 0, 0], config.http.port));

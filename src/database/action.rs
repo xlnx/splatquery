@@ -1,4 +1,4 @@
-use rusqlite::{Connection, Transaction};
+use r2d2_sqlite::rusqlite::{Connection, Transaction};
 
 use crate::Result;
 

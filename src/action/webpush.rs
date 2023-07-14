@@ -2,7 +2,7 @@ use std::{fs::File, sync::Arc};
 
 use async_trait::async_trait;
 use chrono::{DateTime, FixedOffset};
-use rusqlite::{Connection, Transaction};
+use r2d2_sqlite::rusqlite::{Connection, Transaction};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use web_push::{
@@ -130,8 +130,8 @@ impl ActionAgent for WebPushActionAgent {
           .unwrap_or_else(|_| DateTime::<FixedOffset>::MAX_UTC.into())
           .timestamp_millis();
         let img_path = ctx
-          .image
-          .render_pvp(item, "2-1", Region::JP)
+          .renderer
+          .render_pvp(item, "mobile", Region::JP)
           .map_err(|err| Error::InternalServerError(err))?;
         serde_json::to_vec(&json!({
           "title": title,
@@ -214,7 +214,9 @@ impl<'a> WebPushSubscribe for Transaction<'a> {
       &os,
     ))?;
     if n == 0 {
-      Err(Error::SqliteError(rusqlite::Error::QueryReturnedNoRows))
+      Err(Error::SqliteError(
+        r2d2_sqlite::rusqlite::Error::QueryReturnedNoRows,
+      ))
     } else {
       Ok(id)
     }
