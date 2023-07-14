@@ -118,6 +118,7 @@ impl LookupPVP for Connection {
     let mode = request.mode as u8;
     let rule = request.rule as u8;
     let stages = fold_stage_mask(request.stages);
+    let start_time = request.start_time.timestamp();
     let mut stmt = self.prepare_cached(
       "
       SELECT user_actions.id, uid_1, act_agent
@@ -128,10 +129,10 @@ impl LookupPVP for Connection {
       ) 
         INNER JOIN user_action_agents ON uid_1 == user_action_agents.uid
         INNER JOIN user_actions ON aid == user_action_agents.id
-      WHERE act_active
+      WHERE act_active AND rx_pvp < ?4
       ",
     )?;
-    let iter = stmt.query_map((&mode, &rule, &stages), |row| {
+    let iter = stmt.query_map((&mode, &rule, &stages, &start_time), |row| {
       Ok(LookupPVPResponse {
         id: row.get(0)?,
         uid: row.get(1)?,

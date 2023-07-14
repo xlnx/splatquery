@@ -84,6 +84,12 @@ fn do_init(conn: &mut Connection) -> Result<(), r2d2_sqlite::rusqlite::Error> {
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
       uid                 INTEGER NOT NULL,
       aid                 INTEGER NOT NULL,
+      rx_pvp              INTEGER DEFAULT 0,
+      rx_event            INTEGER DEFAULT 0,
+      rx_coop             INTEGER DEFAULT 0,
+      rx_coop_ex          INTEGER DEFAULT 0,
+      rx_gear             INTEGER DEFAULT 0,
+      rx_gear_brand       INTEGER DEFAULT 0,
       FOREIGN KEY ( aid ) REFERENCES user_action_agents ( id ) ON DELETE CASCADE
     );
 

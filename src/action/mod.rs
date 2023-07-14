@@ -61,13 +61,17 @@ impl ActionManager {
 
   pub fn dispatch(&self, msg: Message) -> Result<impl Future<Output = ()>> {
     let conn = self.ctx.database.get()?;
-    let actions = match &msg {
-      Message::PVP(item) => conn.lookup_pvp(LookupPVPRequest {
-        start_time: item.start_time,
-        rule: item.rule,
-        mode: item.mode,
-        stages: &item.stages,
-      })?,
+    let (actions, rx, ts) = match &msg {
+      Message::PVP(item) => (
+        conn.lookup_pvp(LookupPVPRequest {
+          start_time: item.start_time,
+          rule: item.rule,
+          mode: item.mode,
+          stages: &item.stages,
+        })?,
+        "rx_pvp",
+        item.start_time,
+      ),
     };
     let msg = Arc::new(msg);
     let mut tasks = vec![];
@@ -78,7 +82,7 @@ impl ActionManager {
       .build();
     for e in actions.iter() {
       if let Some(agent) = self.agents.get(e.agent.as_str()) {
-        tasks.push(backoff::future::retry(exp.clone(), {
+        let task = backoff::future::retry(exp.clone(), {
           let ctx = self.ctx.clone();
           let id = e.id;
           let uid = e.uid;
@@ -103,7 +107,27 @@ impl ActionManager {
               }
             })
           }
-        }));
+        });
+        let task = task.and_then({
+          let uid = e.uid;
+          let id = e.id;
+          let ts = ts.timestamp();
+          let db = self.ctx.database.clone();
+          move |()| async move {
+            let conn = db.get()?;
+            let sql = format!(
+              "
+              UPDATE user_actions
+              SET {rx} = max({rx}, ?3)
+              WHERE uid = ?1 AND id = ?2
+              ",
+              rx = rx
+            );
+            conn.execute(&sql, (&uid, &id, &ts))?;
+            Ok(())
+          }
+        });
+        tasks.push(task);
       } else {
         log::error!("unknown action agent: [{}]", e.agent)
       }
