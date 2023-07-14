@@ -2,10 +2,8 @@ const getModeImgUrl = (mode) => {
   const m = {
     open: "bankara",
     challenge: "bankara",
-    x: "x",
-    event: "event"
   }
-  return `/img/mode/${m[mode]}.svg`
+  return `/img/mode/${m[mode] || mode}.svg`
 }
 
 const getRuleImgUrl = (rule) => {

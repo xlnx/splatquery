@@ -76,6 +76,10 @@ defineExpose({
 
 const vsModes = [
   {
+    "name": "Regular",
+    "id": "regular",
+  },
+  {
     "name": "Challenge",
     "id": "challenge",
   },
@@ -88,6 +92,10 @@ const vsModes = [
     "id": "x",
   },
   {
+    "name": "Fest",
+    "id": "fest",
+  },
+  {
     "name": "Event",
     "id": "event",
   }
@@ -97,6 +105,10 @@ const vsModes = [
 }))
 
 const vsRules = [
+  {
+    "name": "Turf War",
+    "id": "regular"
+  },
   {
     "name": "Splat Zones",
     "id": "area"
