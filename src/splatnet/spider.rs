@@ -163,7 +163,7 @@ impl Spider {
                            time_period: schedules::RawTimePeriod,
                            setting: schedules::RawPVPMatchSetting| {
       let rule = match setting.pvp_rule.id.as_str() {
-        "VnNSdWxlLTA=" => PVPRule::TurfWar,
+        "VnNSdWxlLTA=" => PVPRule::Regular,
         "VnNSdWxlLTE=" => PVPRule::Area,
         "VnNSdWxlLTI=" => PVPRule::Yagura,
         "VnNSdWxlLTM=" => PVPRule::Hoko,
@@ -208,7 +208,7 @@ impl Spider {
         for s in regular_schedules.nodes.into_iter() {
           if s.time_period.start_time > t {
             if let Some(setting) = s.match_setting.regular_match_setting {
-              collect_pvp(PVPMode::TurfWar, s.time_period, setting);
+              collect_pvp(PVPMode::Regular, s.time_period, setting);
             }
           }
         }
@@ -252,7 +252,7 @@ impl Spider {
       let mut t = s.time_period.start_time;
       if t > self.pvp_fest {
         // find new x match schedule
-        std::mem::swap(&mut self.pvp_x_match, &mut t);
+        std::mem::swap(&mut self.pvp_fest, &mut t);
         log::debug!("cursor.pvp_fest [{}] -> [{}]", t, self.pvp_fest);
         for s in fest_schedules.nodes.into_iter() {
           if s.time_period.start_time > t {

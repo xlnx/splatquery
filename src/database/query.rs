@@ -1,6 +1,7 @@
 use r2d2_sqlite::rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
+use strum::IntoEnumIterator;
 
 use crate::{
   database::pvp::CreatePVPQueryRequest,
@@ -45,12 +46,7 @@ impl From<&PVPQueryRecord> for PVPQueryConfig {
     };
     let parse_modes_list = |modes: u8| {
       let mut modes_ = vec![];
-      for mode in [
-        PVPMode::TurfWar,
-        PVPMode::Challenge,
-        PVPMode::Open,
-        PVPMode::X,
-      ] {
+      for mode in PVPMode::iter() {
         if ((mode as u8) & modes) != 0 {
           modes_.push(mode);
         }
@@ -59,13 +55,7 @@ impl From<&PVPQueryRecord> for PVPQueryConfig {
     };
     let parse_rules_list = |rules: u8| {
       let mut modes_ = vec![];
-      for rule in [
-        PVPRule::TurfWar,
-        PVPRule::Area,
-        PVPRule::Yagura,
-        PVPRule::Hoko,
-        PVPRule::Asari,
-      ] {
+      for rule in PVPRule::iter() {
         if ((rule as u8) & rules) != 0 {
           modes_.push(rule);
         }
@@ -133,7 +123,7 @@ fn default_query_pvp_product_rules() -> Vec<PVPRule> {
 
 fn default_query_pvp_modes() -> Vec<PVPMode> {
   vec![
-    PVPMode::TurfWar,
+    PVPMode::Regular,
     PVPMode::Challenge,
     PVPMode::Open,
     PVPMode::X,

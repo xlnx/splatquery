@@ -3,6 +3,7 @@ use futures::{future::join_all, Future, FutureExt};
 use serde::{Deserialize, Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 use std::{pin::Pin, sync::Arc, time::Duration};
+use strum_macros::EnumIter;
 use tokio::sync::RwLock;
 use tokio_stream::{wrappers::IntervalStream, StreamExt};
 
@@ -17,29 +18,35 @@ mod iso8601;
 mod schedules;
 mod spider;
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str)]
+#[derive(
+  Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str, EnumIter,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum PVPMode {
-  TurfWar = 1,
+  Unknown = 0,
+  Regular = 1,
   Challenge = 2,
   Open = 4,
   X = 8,
   Fest = 16,
-  Unknown = 255,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str)]
+#[derive(
+  Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str, EnumIter,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum PVPRule {
-  TurfWar = 1,
+  Unknown = 0,
+  Regular = 1,
   Area = 2,
   Yagura = 4,
   Hoko = 8,
   Asari = 16,
-  Unknown = 255,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str)]
+#[derive(
+  Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str, EnumIter,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum Region {
   US,
@@ -50,10 +57,10 @@ pub enum Region {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GearType {
-  Head = 0,
-  Clothing = 1,
-  Shoes = 2,
-  Unknown = 255,
+  Unknown = 0,
+  Head = 1,
+  Clothing = 2,
+  Shoes = 4,
 }
 
 #[derive(thiserror::Error, Debug)]
