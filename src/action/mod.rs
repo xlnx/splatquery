@@ -2,7 +2,6 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use backoff::ExponentialBackoffBuilder;
-use chrono::DateTime;
 use futures::{future::join_all, Future, FutureExt, TryFutureExt};
 use r2d2_sqlite::rusqlite::Connection;
 
@@ -13,8 +12,8 @@ use crate::{
     pvp::{LookupPVP, LookupPVPRequest},
     Database,
   },
-  splatnet::{Message, PVPRule},
-  Error, Result,
+  splatnet::Message,
+  Result,
 };
 
 pub mod config;
@@ -63,17 +62,12 @@ impl ActionManager {
   pub fn dispatch(&self, msg: Message) -> Result<impl Future<Output = ()>> {
     let conn = self.ctx.database.get()?;
     let actions = match &msg {
-      Message::PVP(item) => {
-        let start_time = DateTime::parse_from_rfc3339(&item.start_time)
-          .map_err(|err| Error::InternalServerError(Box::new(err)))?;
-        let rule = PVPRule::from_base64(&item.rule);
-        conn.lookup_pvp(LookupPVPRequest {
-          start_time: start_time.into(),
-          rule,
-          mode: item.mode,
-          stages: &item.stages,
-        })?
-      }
+      Message::PVP(item) => conn.lookup_pvp(LookupPVPRequest {
+        start_time: item.start_time,
+        rule: item.rule,
+        mode: item.mode,
+        stages: &item.stages,
+      })?,
     };
     let msg = Arc::new(msg);
     let mut tasks = vec![];

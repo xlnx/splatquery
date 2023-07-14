@@ -18,7 +18,7 @@ use ttl_cache::TtlCache;
 use walkdir::WalkDir;
 
 use crate::{
-  splatnet::{PVPRule, PVPSpiderItem, Region},
+  splatnet::{PVPSpiderItem, Region},
   BoxError,
 };
 
@@ -88,10 +88,10 @@ impl Renderer {
     variant: &str,
     region: Region,
   ) -> Result<String, BoxError> {
+    let start_time = item.start_time.to_rfc3339();
     self.render(
       &format!("pvp.{}", variant),
       || {
-        let rule = PVPRule::from_base64(&item.rule).to_string();
         let stages: Vec<_> = item
           .stages
           .iter()
@@ -99,16 +99,12 @@ impl Renderer {
           .collect();
         context!(
           mode => item.mode.to_string(),
-          rule => rule,
+          rule => item.rule.to_string(),
           stages => stages,
-          start_time => item.start_time,
+          start_time => &start_time,
         )
       },
-      &[
-        &item.start_time,
-        &item.mode.to_string(),
-        &region.to_string(),
-      ],
+      &[&start_time, &item.mode.to_string(), &region.to_string()],
     )
   }
 

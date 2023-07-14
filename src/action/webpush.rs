@@ -1,7 +1,6 @@
 use std::{fs::File, sync::Arc};
 
 use async_trait::async_trait;
-use chrono::{DateTime, FixedOffset};
 use r2d2_sqlite::rusqlite::{Connection, Transaction};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -14,7 +13,7 @@ use crate::{
   database::action::CreateAction,
   splatnet::{
     i18n::{EnUs, I18N},
-    Message, PVPRule, Region,
+    Message, Region,
   },
   Error, Result,
 };
@@ -117,7 +116,7 @@ impl ActionAgent for WebPushActionAgent {
       Message::PVP(item) => {
         let i18n = EnUs();
         let mode = i18n.get_pvp_mode_name(item.mode);
-        let rule = i18n.get_pvp_rule_name(PVPRule::from_base64(&item.rule));
+        let rule = i18n.get_pvp_rule_name(item.rule);
         let stages: Vec<_> = item
           .stages
           .iter()
@@ -126,9 +125,6 @@ impl ActionAgent for WebPushActionAgent {
         let title = format!("{} - {}", rule, mode);
         let body = format!("[{}] & [{}]", stages[0], stages[1]);
         let tag = base64::encode(format!("pvp-[{}]-[{}]", item.mode, item.start_time));
-        let timestamp = DateTime::parse_from_rfc3339(&item.start_time)
-          .unwrap_or_else(|_| DateTime::<FixedOffset>::MAX_UTC.into())
-          .timestamp_millis();
         let img_path = ctx
           .renderer
           .render_pvp(item, "mobile", Region::JP)
@@ -141,7 +137,7 @@ impl ActionAgent for WebPushActionAgent {
             "icon": "https://splatquery.koishi.top/logo.svg",
             "silent": true,
             "tag": tag,
-            "timestamp": timestamp,
+            "timestamp": item.start_time.timestamp_millis(),
           }
         }))
         .map_err(|err| Error::InternalServerError(Box::new(err)))?

@@ -13,6 +13,7 @@ pub use self::spider::{CoopSpiderItem, GearSpiderItem, PVPSpiderItem};
 
 mod gear;
 pub mod i18n;
+mod iso8601;
 mod schedules;
 mod spider;
 
@@ -45,19 +46,6 @@ pub enum Region {
   EU,
   CN,
   JP,
-}
-
-impl PVPRule {
-  pub fn from_base64(s: &str) -> Self {
-    match s {
-      "VnNSdWxlLTA=" => Self::TurfWar,
-      "VnNSdWxlLTE=" => Self::Area,
-      "VnNSdWxlLTI=" => Self::Yagura,
-      "VnNSdWxlLTM=" => Self::Hoko,
-      "VnNSdWxlLTQ=" => Self::Asari,
-      _ => Self::Unknown,
-    }
-  }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

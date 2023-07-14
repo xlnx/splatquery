@@ -1,60 +1,61 @@
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct SchedulesResponse {
-  pub data: SchedulesData,
+pub struct RawSchedulesResponse {
+  pub data: RawSchedulesData,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct SchedulesData {
+pub struct RawSchedulesData {
   #[serde(rename = "regularSchedules")]
-  pub regular_schedules: ScheduleList<PVPSchedule<RegularMatchSetting>>,
+  pub regular_schedules: RawScheduleList<RawPVPSchedule<RawRegularMatchSetting>>,
 
   #[serde(rename = "bankaraSchedules")]
-  pub bankara_schedules: ScheduleList<PVPSchedule<BankaraMatchSetting>>,
+  pub bankara_schedules: RawScheduleList<RawPVPSchedule<RawBankaraMatchSetting>>,
 
   #[serde(rename = "xSchedules")]
-  pub x_schedules: ScheduleList<PVPSchedule<XMatchSetting>>,
+  pub x_schedules: RawScheduleList<RawPVPSchedule<RawXMatchSetting>>,
 
   #[serde(rename = "eventSchedules")]
-  pub event_schedules: ScheduleList<EventSchedule>,
+  pub event_schedules: RawScheduleList<RawEventSchedule>,
 
   #[serde(rename = "festSchedules")]
-  pub fest_schedules: ScheduleList<PVPSchedule<FestMatchSetting>>,
+  pub fest_schedules: RawScheduleList<RawPVPSchedule<RawFestMatchSetting>>,
 
   #[serde(rename = "coopGroupingSchedule")]
-  pub coop_grouping_schedule: CoopGroupingSchedule,
+  pub coop_grouping_schedule: RawCoopGroupingSchedule,
   // #[serde(rename = "vsStages")]
   // pub vs_stages: VSStages,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct RegularMatchSetting {
+pub struct RawRegularMatchSetting {
   #[serde(rename = "regularMatchSetting")]
-  pub regular_match_setting: Option<PVPMatchSetting>,
+  pub regular_match_setting: Option<RawPVPMatchSetting>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct BankaraMatchSetting {
+pub struct RawBankaraMatchSetting {
   #[serde(rename = "bankaraMatchSettings")]
-  pub bankara_match_settings: Option<(PVPMatchSetting, PVPMatchSetting)>,
+  pub bankara_match_settings: Option<(RawPVPMatchSetting, RawPVPMatchSetting)>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct XMatchSetting {
+pub struct RawXMatchSetting {
   #[serde(rename = "xMatchSetting")]
-  pub x_match_setting: Option<PVPMatchSetting>,
+  pub x_match_setting: Option<RawPVPMatchSetting>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct FestMatchSetting {
+pub struct RawFestMatchSetting {
   #[serde(rename = "festMatchSetting")]
-  pub fest_match_setting: Option<PVPMatchSetting>,
+  pub fest_match_setting: Option<RawPVPMatchSetting>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 #[serde(bound = "for<'de2> T: Deserialize<'de2>")]
-pub struct ScheduleList<T>
+pub struct RawScheduleList<T>
 where
   for<'de2> T: Deserialize<'de2> + PartialEq + Eq,
 {
@@ -63,46 +64,48 @@ where
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 #[serde(bound = "for<'de2> T: Deserialize<'de2>")]
-pub struct PVPSchedule<T>
+pub struct RawPVPSchedule<T>
 where
   for<'de2> T: Deserialize<'de2> + PartialEq + Eq,
 {
   #[serde(flatten)]
-  pub time_period: TimePeriod,
+  pub time_period: RawTimePeriod,
 
   #[serde(flatten)]
   pub match_setting: T,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct EventSchedule {
+pub struct RawEventSchedule {
   #[serde(rename = "timePeriods")]
-  pub time_periods: Vec<TimePeriod>,
+  pub time_periods: Vec<RawTimePeriod>,
 
   #[serde(rename = "leagueMatchSetting")]
-  pub league_match_setting: LeagueMatchSetting,
+  pub league_match_setting: RawLeagueMatchSetting,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Clone, Debug)]
-pub struct TimePeriod {
+pub struct RawTimePeriod {
   #[serde(rename = "startTime")]
-  pub start_time: String,
+  #[serde(deserialize_with = "super::iso8601::parse")]
+  pub start_time: DateTime<Utc>,
 
   #[serde(rename = "endTime")]
-  pub end_time: String,
+  #[serde(deserialize_with = "super::iso8601::parse")]
+  pub end_time: DateTime<Utc>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct LeagueMatchSetting {
+pub struct RawLeagueMatchSetting {
   #[serde(rename = "leagueMatchEvent")]
-  pub league_match_event: LeagueMatchEvent,
+  pub league_match_event: RawLeagueMatchEvent,
 
   #[serde(flatten)]
-  pub pvp_match_setting: PVPMatchSetting,
+  pub pvp_match_setting: RawPVPMatchSetting,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct LeagueMatchEvent {
+pub struct RawLeagueMatchEvent {
   pub id: String,
 
   #[serde(rename = "leagueMatchEventId")]
@@ -116,16 +119,16 @@ pub struct LeagueMatchEvent {
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct PVPMatchSetting {
+pub struct RawPVPMatchSetting {
   #[serde(rename = "vsStages")]
-  pub pvp_stages: Vec<PVPStage>,
+  pub pvp_stages: Vec<RawPVPStage>,
 
   #[serde(rename = "vsRule")]
-  pub pvp_rule: PVPRule,
+  pub pvp_rule: RawPVPRule,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct PVPRule {
+pub struct RawPVPRule {
   pub id: String,
 
   pub rule: String,
@@ -134,7 +137,7 @@ pub struct PVPRule {
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct PVPStage {
+pub struct RawPVPStage {
   pub id: String,
 
   #[serde(rename = "vsStageId")]
@@ -144,39 +147,39 @@ pub struct PVPStage {
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct CoopGroupingSchedule {
+pub struct RawCoopGroupingSchedule {
   #[serde(rename = "regularSchedules")]
-  pub regular_schedules: ScheduleList<CoopNormalSchedule>,
+  pub regular_schedules: RawScheduleList<RawCoopNormalSchedule>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct CoopNormalSchedule {
+pub struct RawCoopNormalSchedule {
   #[serde(flatten)]
-  pub time_period: TimePeriod,
+  pub time_period: RawTimePeriod,
 
-  pub setting: CoopNormalSetting,
+  pub setting: RawCoopNormalSetting,
 
   #[serde(rename = "__splatoon3ink_king_salmonid_guess")]
   pub splatoon3ink_king_salmonid_guess: String,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct CoopNormalSetting {
+pub struct RawCoopNormalSetting {
   #[serde(rename = "coopStage")]
-  pub coop_stage: CoopStage,
+  pub coop_stage: RawCoopStage,
 
-  pub weapons: Vec<CoopWeapon>,
+  pub weapons: Vec<RawCoopWeapon>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct CoopStage {
+pub struct RawCoopStage {
   pub id: String,
 
   pub name: String,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct CoopWeapon {
+pub struct RawCoopWeapon {
   #[serde(rename = "__splatoon3ink_id")]
   pub splatoon3ink_id: String,
 
@@ -195,30 +198,34 @@ mod test {
       .join("resources/test/splat3ink_schedules_response.json");
     let file = File::open(path).unwrap();
     let reader = BufReader::new(file);
-    let schedules: SchedulesResponse = serde_json::from_reader(reader).unwrap();
+    let schedules: RawSchedulesResponse = serde_json::from_reader(reader).unwrap();
     assert_eq!(schedules.data.x_schedules.nodes.len(), 12);
     assert_eq!(
       schedules.data.x_schedules.nodes[0],
-      PVPSchedule::<XMatchSetting> {
-        time_period: TimePeriod {
-          start_time: String::from("2023-06-15T16:00:00Z"),
-          end_time: String::from("2023-06-15T18:00:00Z")
+      RawPVPSchedule::<RawXMatchSetting> {
+        time_period: RawTimePeriod {
+          start_time: DateTime::parse_from_rfc3339("2023-06-15T16:00:00Z")
+            .unwrap()
+            .into(),
+          end_time: DateTime::parse_from_rfc3339("2023-06-15T18:00:00Z")
+            .unwrap()
+            .into()
         },
-        match_setting: XMatchSetting {
-          x_match_setting: Some(PVPMatchSetting {
+        match_setting: RawXMatchSetting {
+          x_match_setting: Some(RawPVPMatchSetting {
             pvp_stages: vec![
-              PVPStage {
+              RawPVPStage {
                 id: String::from("VnNTdGFnZS0xNA=="),
                 pvp_stage_id: 14,
                 name: String::from("Sturgeon Shipyard")
               },
-              PVPStage {
+              RawPVPStage {
                 id: String::from("VnNTdGFnZS0xOA=="),
                 pvp_stage_id: 18,
                 name: String::from("Manta Maria")
               }
             ],
-            pvp_rule: PVPRule {
+            pvp_rule: RawPVPRule {
               id: String::from("VnNSdWxlLTI="),
               rule: String::from("LOFT"),
               name: String::from("Tower Control")
@@ -242,30 +249,34 @@ mod test {
         .coop_grouping_schedule
         .regular_schedules
         .nodes[0],
-      CoopNormalSchedule {
-        time_period: TimePeriod {
-          start_time: String::from("2023-06-15T08:00:00Z"),
-          end_time: String::from("2023-06-17T00:00:00Z")
+      RawCoopNormalSchedule {
+        time_period: RawTimePeriod {
+          start_time: DateTime::parse_from_rfc3339("2023-06-15T08:00:00Z")
+            .unwrap()
+            .into(),
+          end_time: DateTime::parse_from_rfc3339("2023-06-17T00:00:00Z")
+            .unwrap()
+            .into()
         },
-        setting: CoopNormalSetting {
-          coop_stage: CoopStage {
+        setting: RawCoopNormalSetting {
+          coop_stage: RawCoopStage {
             id: String::from("Q29vcFN0YWdlLTI="),
             name: String::from("Sockeye Station"),
           },
           weapons: vec![
-            CoopWeapon {
+            RawCoopWeapon {
               splatoon3ink_id: String::from("49171e6de78e50c7"),
               name: String::from("Splattershot Jr.")
             },
-            CoopWeapon {
+            RawCoopWeapon {
               splatoon3ink_id: String::from("09465cbd66e15c68"),
               name: String::from("Splat Dualies")
             },
-            CoopWeapon {
+            RawCoopWeapon {
               splatoon3ink_id: String::from("b0343d4f4b600e95"),
               name: String::from("Jet Squelcher")
             },
-            CoopWeapon {
+            RawCoopWeapon {
               splatoon3ink_id: String::from("aae42b6ef1b5090d"),
               name: String::from("Hydra Splatling")
             },
