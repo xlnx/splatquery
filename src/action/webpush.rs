@@ -93,23 +93,26 @@ impl ActionAgent for WebPushActionAgent {
     id: i64,
     msg: Arc<Message>,
   ) -> Result<()> {
-    let sub = {
+    let (sub, os): (_, String) = {
       let conn = ctx.database.get()?;
       let mut stmt = conn.prepare_cached(
         "
-          SELECT endpoint, p256dh, auth 
-          FROM webpush_ext_info
-          WHERE id = ?1
-          ",
+        SELECT endpoint, p256dh, auth, os
+        FROM webpush_ext_info
+        WHERE id = ?1
+        ",
       )?;
       stmt.query_row((&id,), |row| {
-        Ok(SubscriptionInfo {
-          endpoint: row.get(0)?,
-          keys: SubscriptionKeys {
-            p256dh: row.get(1)?,
-            auth: row.get(2)?,
+        Ok((
+          SubscriptionInfo {
+            endpoint: row.get(0)?,
+            keys: SubscriptionKeys {
+              p256dh: row.get(1)?,
+              auth: row.get(2)?,
+            },
           },
-        })
+          row.get(3)?,
+        ))
       })?
     };
     let payload = match msg.as_ref() {
@@ -125,9 +128,14 @@ impl ActionAgent for WebPushActionAgent {
         let title = format!("{} - {}", rule, mode);
         let body = format!("[{}] & [{}]", stages[0], stages[1]);
         let tag = base64::encode(format!("pvp-[{}]-[{}]", item.mode, item.start_time));
+        let variant = if os.starts_with("Windows") {
+          "pc"
+        } else {
+          "mobile"
+        };
         let img_path = ctx
           .renderer
-          .render_pvp(item, "mobile", Region::JP)
+          .render_pvp(item, variant, Region::JP)
           .map_err(|err| Error::InternalServerError(err))?;
         serde_json::to_vec(&json!({
           "title": title,
