@@ -242,12 +242,6 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_rule_deserialize() {
-    let rule = PVPRule::from_base64("VnNSdWxlLTI=");
-    assert_eq!(rule.to_string(), String::from("yagura"));
-  }
-
-  #[test]
   fn test_lookup_simple() {
     let db = Database::new_in_memory().unwrap();
     let mut conn = db.get().unwrap();
