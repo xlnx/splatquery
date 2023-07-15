@@ -29,7 +29,7 @@ pub enum Language {
 pub enum TimeZone {
   Jst = 9,
   Pt = -7,
-  Cest = 2,
+  Cet = 2,
   Cst = 8,
 }
 

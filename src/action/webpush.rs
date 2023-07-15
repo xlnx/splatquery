@@ -124,7 +124,7 @@ impl ActionAgent for WebPushActionAgent {
     let time_zone =
       TimeZone::from_str(&time_zone).map_err(|err| Error::InternalServerError(Box::new(err)))?;
     let payload = match msg.as_ref() {
-      Message::PVP(item) => {
+      Message::Pvp(item) => {
         let i18n = EnUs();
         let mode = i18n.get_pvp_mode_name(item.mode);
         let rule = i18n.get_pvp_rule_name(item.rule);

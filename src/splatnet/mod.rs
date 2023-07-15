@@ -10,7 +10,7 @@ use tokio_stream::{wrappers::IntervalStream, StreamExt};
 use crate::{action::ActionManager, BoxError};
 
 use self::spider::Spider;
-pub use self::spider::{CoopSpiderItem, GearSpiderItem, PVPSpiderItem};
+pub use self::spider::{CoopSpiderItem, GearSpiderItem, PvpSpiderItem};
 
 mod gear;
 pub mod i18n;
@@ -22,20 +22,21 @@ mod spider;
   Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str, EnumIter,
 )]
 #[serde(rename_all = "lowercase")]
-pub enum PVPMode {
+pub enum PvpMode {
   Unknown = 0,
   Regular = 1,
   Challenge = 2,
   Open = 4,
   X = 8,
   Fest = 16,
+  Event = 32,
 }
 
 #[derive(
   Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str, EnumIter,
 )]
 #[serde(rename_all = "lowercase")]
-pub enum PVPRule {
+pub enum PvpRule {
   Unknown = 0,
   Regular = 1,
   Area = 2,
@@ -77,7 +78,7 @@ pub struct SplatNetUpdateIntervalConfig {
 
 #[derive(Debug)]
 pub enum Message {
-  PVP(PVPSpiderItem),
+  Pvp(PvpSpiderItem),
 }
 
 pub struct SplatNetAgent {
@@ -161,10 +162,10 @@ impl SplatNetAgent {
     Ok(())
   }
 
-  async fn handle_pvp_update(&self, items: Vec<PVPSpiderItem>) -> Result<(), BoxError> {
+  async fn handle_pvp_update(&self, items: Vec<PvpSpiderItem>) -> Result<(), BoxError> {
     let mut tasks = vec![];
     for item in items.into_iter() {
-      tasks.push(self.actions.dispatch(Message::PVP(item))?);
+      tasks.push(self.actions.dispatch(Message::Pvp(item))?);
     }
     join_all(tasks).await;
     Ok(())

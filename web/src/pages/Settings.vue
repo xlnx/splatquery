@@ -187,8 +187,8 @@ const timeZones = [
     url: `/img/region/na.svg`,
   },
   {
-    id: 'cest',
-    name: 'CEST/Berlin',
+    id: 'cet',
+    name: 'CET/Berlin',
     url: `/img/region/eu.svg`,
   },
   {
@@ -226,7 +226,7 @@ const dayHrsNever = [
 const tzOffsets = {
   jst: +9,
   pt: -7,
-  cest: +2,
+  cet: +2,
   cst: +8,
 }
 

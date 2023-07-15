@@ -9,7 +9,7 @@ use r2d2_sqlite::rusqlite::Connection;
 use crate::renderer::Renderer;
 use crate::{
   database::{
-    pvp::{LookupPVP, LookupPVPRequest},
+    pvp::{LookupPvp, LookupPvpRequest},
     Database,
   },
   splatnet::Message,
@@ -62,8 +62,8 @@ impl ActionManager {
   pub fn dispatch(&self, msg: Message) -> Result<impl Future<Output = ()>> {
     let conn = self.ctx.database.get()?;
     let (actions, rx, ts) = match &msg {
-      Message::PVP(item) => (
-        conn.lookup_pvp(LookupPVPRequest {
+      Message::Pvp(item) => (
+        conn.lookup_pvp(LookupPvpRequest {
           start_time: item.start_time,
           rule: item.rule,
           mode: item.mode,

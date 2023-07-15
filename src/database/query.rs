@@ -4,37 +4,37 @@ use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 use strum::IntoEnumIterator;
 
 use crate::{
-  database::pvp::CreatePVPQueryRequest,
-  splatnet::{PVPMode, PVPRule},
+  database::pvp::CreatePvpQueryRequest,
+  splatnet::{PvpMode, PvpRule},
   Error, Result,
 };
 
 use super::pvp::{
-  CreatePVPQuery, DeletePVPQuery, DeletePVPQueryRequest, ListPVPQuery, ListPVPQueryRequest,
-  PVPQueryRecord, UpdatePVPQuery, UpdatePVPQueryRequest,
+  CreatePvpQuery, DeletePvpQuery, DeletePvpQueryRequest, ListPvpQuery, ListPvpQueryRequest,
+  PvpQueryRecord, UpdatePvpQuery, UpdatePvpQueryRequest,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str)]
 #[serde(rename_all = "lowercase")]
 pub enum QueryType {
-  PVP,
+  Pvp,
   Coop,
   Gears,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct PVPQueryConfig {
+pub struct PvpQueryConfig {
   #[serde(default = "default_query_pvp_modes")]
-  pub modes: Vec<PVPMode>,
+  pub modes: Vec<PvpMode>,
   #[serde(default = "default_query_pvp_product_rules")]
-  pub rules: Vec<PVPRule>,
+  pub rules: Vec<PvpRule>,
   pub includes: Vec<u32>,
   #[serde(default)]
   pub excludes: Vec<u32>,
 }
 
-impl From<&PVPQueryRecord> for PVPQueryConfig {
-  fn from(value: &PVPQueryRecord) -> Self {
+impl From<&PvpQueryRecord> for PvpQueryConfig {
+  fn from(value: &PvpQueryRecord) -> Self {
     let parse_stage_list = |stages: u32| {
       let mut stages_ = vec![];
       for i in 0..32 {
@@ -46,7 +46,7 @@ impl From<&PVPQueryRecord> for PVPQueryConfig {
     };
     let parse_modes_list = |modes: u8| {
       let mut modes_ = vec![];
-      for mode in PVPMode::iter() {
+      for mode in PvpMode::iter() {
         if ((mode as u8) & modes) != 0 {
           modes_.push(mode);
         }
@@ -55,7 +55,7 @@ impl From<&PVPQueryRecord> for PVPQueryConfig {
     };
     let parse_rules_list = |rules: u8| {
       let mut modes_ = vec![];
-      for rule in PVPRule::iter() {
+      for rule in PvpRule::iter() {
         if ((rule as u8) & rules) != 0 {
           modes_.push(rule);
         }
@@ -66,7 +66,7 @@ impl From<&PVPQueryRecord> for PVPQueryConfig {
     let rules = parse_rules_list(value.rules);
     let includes = parse_stage_list(value.includes);
     let excludes = parse_stage_list(value.excludes);
-    PVPQueryConfig {
+    PvpQueryConfig {
       modes,
       rules,
       includes,
@@ -75,10 +75,10 @@ impl From<&PVPQueryRecord> for PVPQueryConfig {
   }
 }
 
-impl TryInto<PVPQueryRecord> for &PVPQueryConfig {
+impl TryInto<PvpQueryRecord> for &PvpQueryConfig {
   type Error = Error;
 
-  fn try_into(self) -> std::result::Result<PVPQueryRecord, Self::Error> {
+  fn try_into(self) -> std::result::Result<PvpQueryRecord, Self::Error> {
     let parse_stage_list = |stages: &[u32]| -> Result<_> {
       let mut ret = 0u32;
       for id in stages {
@@ -93,7 +93,7 @@ impl TryInto<PVPQueryRecord> for &PVPQueryConfig {
     let rules = self.rules.iter().fold(0u8, |a, b| a | *b as u8);
     let includes = parse_stage_list(&self.includes)?;
     let excludes = parse_stage_list(&self.excludes)?;
-    Ok(PVPQueryRecord {
+    Ok(PvpQueryRecord {
       modes,
       rules,
       includes,
@@ -106,27 +106,27 @@ impl TryInto<PVPQueryRecord> for &PVPQueryConfig {
 #[serde(tag = "type")]
 #[serde(rename_all = "lowercase")]
 pub enum QueryConfig {
-  PVP {
+  Pvp {
     #[serde(flatten)]
-    config: PVPQueryConfig,
+    config: PvpQueryConfig,
   },
 }
 
-fn default_query_pvp_product_rules() -> Vec<PVPRule> {
+fn default_query_pvp_product_rules() -> Vec<PvpRule> {
   vec![
-    PVPRule::Area,
-    PVPRule::Yagura,
-    PVPRule::Hoko,
-    PVPRule::Asari,
+    PvpRule::Area,
+    PvpRule::Yagura,
+    PvpRule::Hoko,
+    PvpRule::Asari,
   ]
 }
 
-fn default_query_pvp_modes() -> Vec<PVPMode> {
+fn default_query_pvp_modes() -> Vec<PvpMode> {
   vec![
-    PVPMode::Regular,
-    PVPMode::Challenge,
-    PVPMode::Open,
-    PVPMode::X,
+    PvpMode::Regular,
+    PvpMode::Challenge,
+    PvpMode::Open,
+    PvpMode::X,
   ]
 }
 
@@ -179,10 +179,10 @@ impl CreateQuery for Connection {
   fn create_query(&self, request: CreateQueryRequest) -> Result<i64> {
     let CreateQueryRequest { uid, config } = request;
     match config {
-      QueryConfig::PVP { config } => {
+      QueryConfig::Pvp { config } => {
         // do create pvp query
         let record = &config.try_into()?;
-        let id = self.create_pvp_query(CreatePVPQueryRequest { uid, record })?;
+        let id = self.create_pvp_query(CreatePvpQueryRequest { uid, record })?;
         // emit id
         Ok(id)
       }
@@ -193,10 +193,10 @@ impl CreateQuery for Connection {
 impl ListQuery for Connection {
   fn list_query(&self, request: ListQueryRequest) -> Result<Vec<ListQueryResponse>> {
     let ListQueryRequest { uid, qid } = request;
-    let li = self.list_pvp_query(ListPVPQueryRequest { uid, qid })?;
+    let li = self.list_pvp_query(ListPvpQueryRequest { uid, qid })?;
     let iter = li.into_iter().map(|e| ListQueryResponse {
       qid: e.qid,
-      config: QueryConfig::PVP {
+      config: QueryConfig::Pvp {
         config: (&e.record).into(),
       },
       created_time: e.created_time,
@@ -210,9 +210,9 @@ impl UpdateQuery for Connection {
   fn update_query(&self, request: UpdateQueryRequest) -> Result<()> {
     let UpdateQueryRequest { uid, qid, config } = request;
     match config {
-      QueryConfig::PVP { config } => {
+      QueryConfig::Pvp { config } => {
         let record = &config.try_into()?;
-        self.update_pvp_query(UpdatePVPQueryRequest { uid, qid, record })?;
+        self.update_pvp_query(UpdatePvpQueryRequest { uid, qid, record })?;
         Ok(())
       }
     }
@@ -223,8 +223,8 @@ impl DeleteQuery for Connection {
   fn delete_query(&self, request: DeleteQueryRequest) -> Result<()> {
     let DeleteQueryRequest { uid, qid, qtype } = request;
     match qtype {
-      QueryType::PVP => {
-        self.delete_pvp_query(DeletePVPQueryRequest { uid, qid })?;
+      QueryType::Pvp => {
+        self.delete_pvp_query(DeletePvpQueryRequest { uid, qid })?;
         Ok(())
       }
       _ => Err(Error::InvalidParameter("qtype", qtype.to_string())),

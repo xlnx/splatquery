@@ -84,32 +84,43 @@ pub async fn oauth2(
           is_in_european_union: Some(true /* EU */),
           ..
         } => {
-          log::debug!("{:?} -> [cest/enus]", country);
-          (Some(TimeZone::Cest), Some(Language::EnUs))
+          log::info!("[{}] -> [cet/enus]", addr.ip());
+          (Some(TimeZone::Cet), Some(Language::EnUs))
         }
         Country {
           geoname_id: Some(1861060 /* JP */),
           ..
         } => {
-          log::debug!("{:?} -> [jst/enus]", country);
+          log::info!("[{}] -> [jst/enus]", addr.ip());
           (Some(TimeZone::Jst), Some(Language::EnUs))
         }
         Country {
           geoname_id: Some(1814991 /* CHN */),
           ..
         } => {
-          log::debug!("{:?} -> [cst/enus]", country);
+          log::info!("[{}] -> [cst/enus]", addr.ip());
           (Some(TimeZone::Cst), Some(Language::EnUs))
         }
         Country {
           geoname_id: Some(6252001 /* US */) | Some(6251999 /* CA */),
           ..
         } => {
-          log::debug!("{:?} -> [pdt/enus]", country);
+          log::info!("[{}] -> [pdt/enus]", addr.ip());
           (Some(TimeZone::Pt), Some(Language::EnUs))
         }
-        _ => (None, None),
+        _ => {
+          log::info!(
+            "unknown region [{:?}], ip: [{}]",
+            country
+              .geoname_id
+              .map(|e| format!("https://www.geonames.org/{}", e)),
+            addr.ip(),
+          );
+          (None, None)
+        }
       };
+    } else {
+      log::warn!("match ip [{}] against geoip2 failed", addr.ip());
     }
   }
 

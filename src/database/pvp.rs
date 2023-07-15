@@ -3,7 +3,7 @@ use chrono::{DateTime, Datelike, Timelike, Utc};
 use r2d2_sqlite::rusqlite::Connection;
 
 use crate::{
-  splatnet::{PVPMode, PVPRule},
+  splatnet::{PvpMode, PvpRule},
   Error, Result,
 };
 
@@ -14,7 +14,7 @@ fn fold_stage_mask(stages: &[u32]) -> u32 {
 }
 
 #[derive(Debug)]
-pub struct PVPQueryRecord {
+pub struct PvpQueryRecord {
   pub modes: u8,
   pub rules: u8,
   pub includes: u32,
@@ -22,76 +22,76 @@ pub struct PVPQueryRecord {
 }
 
 #[derive(Debug)]
-pub struct CreatePVPQueryRequest<'a> {
+pub struct CreatePvpQueryRequest<'a> {
   pub uid: i64,
-  pub record: &'a PVPQueryRecord,
+  pub record: &'a PvpQueryRecord,
 }
 
-pub trait CreatePVPQuery {
-  fn create_pvp_query(&self, request: CreatePVPQueryRequest) -> Result<i64>;
+pub trait CreatePvpQuery {
+  fn create_pvp_query(&self, request: CreatePvpQueryRequest) -> Result<i64>;
 }
 
 #[derive(Debug)]
-pub struct LookupPVPRequest<'a> {
+pub struct LookupPvpRequest<'a> {
   pub start_time: DateTime<Utc>,
-  pub rule: PVPRule,
-  pub mode: PVPMode,
+  pub rule: PvpRule,
+  pub mode: PvpMode,
   pub stages: &'a [u32],
 }
 
-pub struct LookupPVPResponse {
+pub struct LookupPvpResponse {
   pub id: i64,
   pub uid: i64,
   pub agent: String,
 }
 
-pub trait LookupPVP {
-  fn lookup_pvp(&self, request: LookupPVPRequest) -> Result<AppendList<LookupPVPResponse>>;
+pub trait LookupPvp {
+  fn lookup_pvp(&self, request: LookupPvpRequest) -> Result<AppendList<LookupPvpResponse>>;
 }
 
 #[derive(Debug)]
-pub struct ListPVPQueryRequest {
+pub struct ListPvpQueryRequest {
   pub uid: i64,
   pub qid: Option<i64>,
 }
 
-pub struct ListPVPQueryResponse {
+pub struct ListPvpQueryResponse {
   pub qid: i64,
-  pub record: PVPQueryRecord,
+  pub record: PvpQueryRecord,
   pub created_time: String,
 }
 
-pub trait ListPVPQuery {
-  fn list_pvp_query(&self, request: ListPVPQueryRequest) -> Result<Vec<ListPVPQueryResponse>>;
+pub trait ListPvpQuery {
+  fn list_pvp_query(&self, request: ListPvpQueryRequest) -> Result<Vec<ListPvpQueryResponse>>;
 }
 
 #[derive(Debug)]
-pub struct UpdatePVPQueryRequest<'a> {
+pub struct UpdatePvpQueryRequest<'a> {
   pub uid: i64,
   pub qid: i64,
-  pub record: &'a PVPQueryRecord,
+  pub record: &'a PvpQueryRecord,
 }
 
-pub trait UpdatePVPQuery {
-  fn update_pvp_query(&self, request: UpdatePVPQueryRequest) -> Result<()>;
+pub trait UpdatePvpQuery {
+  fn update_pvp_query(&self, request: UpdatePvpQueryRequest) -> Result<()>;
 }
 
 #[derive(Debug)]
-pub struct DeletePVPQueryRequest {
+pub struct DeletePvpQueryRequest {
   pub uid: i64,
   pub qid: i64,
 }
 
-pub trait DeletePVPQuery {
-  fn delete_pvp_query(&self, request: DeletePVPQueryRequest) -> Result<()>;
+pub trait DeletePvpQuery {
+  fn delete_pvp_query(&self, request: DeletePvpQueryRequest) -> Result<()>;
 }
 
-impl CreatePVPQuery for Connection {
-  fn create_pvp_query(&self, request: CreatePVPQueryRequest) -> Result<i64> {
-    let CreatePVPQueryRequest {
+impl CreatePvpQuery for Connection {
+  fn create_pvp_query(&self, request: CreatePvpQueryRequest) -> Result<i64> {
+    let CreatePvpQueryRequest {
       uid,
       record:
-        PVPQueryRecord {
+        PvpQueryRecord {
           modes,
           rules,
           includes,
@@ -115,9 +115,9 @@ impl CreatePVPQuery for Connection {
   }
 }
 
-impl LookupPVP for Connection {
-  fn lookup_pvp(&self, request: LookupPVPRequest) -> Result<AppendList<LookupPVPResponse>> {
-    let LookupPVPRequest {
+impl LookupPvp for Connection {
+  fn lookup_pvp(&self, request: LookupPvpRequest) -> Result<AppendList<LookupPvpResponse>> {
+    let LookupPvpRequest {
       start_time,
       rule,
       mode,
@@ -154,7 +154,7 @@ impl LookupPVP for Connection {
     );
     let mut stmt = self.prepare_cached(&sql)?;
     let iter = stmt.query_map((&mode, &rule, &stages, &ts, &day_hrs_v), |row| {
-      Ok(LookupPVPResponse {
+      Ok(LookupPvpResponse {
         id: row.get(0)?,
         uid: row.get(1)?,
         agent: row.get(2)?,
@@ -165,8 +165,8 @@ impl LookupPVP for Connection {
   }
 }
 
-impl ListPVPQuery for Connection {
-  fn list_pvp_query(&self, request: ListPVPQueryRequest) -> Result<Vec<ListPVPQueryResponse>> {
+impl ListPvpQuery for Connection {
+  fn list_pvp_query(&self, request: ListPvpQueryRequest) -> Result<Vec<ListPvpQueryResponse>> {
     let mut sql: String = "
       SELECT id, modes, rules, includes, excludes, created_time
       FROM pvp_queries
@@ -180,9 +180,9 @@ impl ListPVPQuery for Connection {
     }
     let mut stmt = self.prepare_cached(&sql)?;
     let iter = stmt.query_map((&request.uid, &request.qid), |row| {
-      Ok(ListPVPQueryResponse {
+      Ok(ListPvpQueryResponse {
         qid: row.get(0)?,
-        record: PVPQueryRecord {
+        record: PvpQueryRecord {
           modes: row.get(1)?,
           rules: row.get(2)?,
           includes: row.get(3)?,
@@ -196,13 +196,13 @@ impl ListPVPQuery for Connection {
   }
 }
 
-impl UpdatePVPQuery for Connection {
-  fn update_pvp_query(&self, request: UpdatePVPQueryRequest) -> Result<()> {
-    let UpdatePVPQueryRequest {
+impl UpdatePvpQuery for Connection {
+  fn update_pvp_query(&self, request: UpdatePvpQueryRequest) -> Result<()> {
+    let UpdatePvpQueryRequest {
       uid,
       qid,
       record:
-        PVPQueryRecord {
+        PvpQueryRecord {
           modes,
           rules,
           includes,
@@ -227,9 +227,9 @@ impl UpdatePVPQuery for Connection {
   }
 }
 
-impl DeletePVPQuery for Connection {
-  fn delete_pvp_query(&self, request: DeletePVPQueryRequest) -> Result<()> {
-    let DeletePVPQueryRequest { uid, qid } = request;
+impl DeletePvpQuery for Connection {
+  fn delete_pvp_query(&self, request: DeletePvpQueryRequest) -> Result<()> {
+    let DeletePvpQueryRequest { uid, qid } = request;
     let mut stmt = self.prepare_cached(
       "
       DELETE FROM pvp_queries
@@ -252,13 +252,13 @@ mod tests {
     database::{
       action::CreateAction,
       query::{
-        CreateQuery, CreateQueryRequest, PVPQueryConfig, QueryConfig, UpdateQuery,
+        CreateQuery, CreateQueryRequest, PvpQueryConfig, QueryConfig, UpdateQuery,
         UpdateQueryRequest,
       },
       user::{CreateUser, CreateUserRequest, LookupUserId, LookupUserIdRequest},
       Database,
     },
-    splatnet::PVPMode,
+    splatnet::PvpMode,
   };
 
   use super::*;
@@ -294,10 +294,10 @@ mod tests {
     let qid = tx
       .create_query(CreateQueryRequest {
         uid,
-        config: &QueryConfig::PVP {
-          config: PVPQueryConfig {
-            modes: vec![PVPMode::Open, PVPMode::X],
-            rules: vec![PVPRule::Asari],
+        config: &QueryConfig::Pvp {
+          config: PvpQueryConfig {
+            modes: vec![PvpMode::Open, PvpMode::X],
+            rules: vec![PvpRule::Asari],
             includes: vec![1, 2],
             excludes: vec![4, 5],
           },
@@ -307,10 +307,10 @@ mod tests {
     tx.commit().unwrap();
 
     let li = conn
-      .lookup_pvp(LookupPVPRequest {
+      .lookup_pvp(LookupPvpRequest {
         start_time: Utc::now(),
-        rule: PVPRule::Asari,
-        mode: PVPMode::X,
+        rule: PvpRule::Asari,
+        mode: PvpMode::X,
         stages: &[1, 3],
       })
       .unwrap();
@@ -323,10 +323,10 @@ mod tests {
     tx.commit().unwrap();
 
     let li = conn
-      .lookup_pvp(LookupPVPRequest {
+      .lookup_pvp(LookupPvpRequest {
         start_time: Utc::now(),
-        rule: PVPRule::Asari,
-        mode: PVPMode::X,
+        rule: PvpRule::Asari,
+        mode: PvpMode::X,
         stages: &[1, 3],
       })
       .unwrap();
@@ -337,10 +337,10 @@ mod tests {
     assert_eq!(e.agent, act_agent);
 
     let li = conn
-      .lookup_pvp(LookupPVPRequest {
+      .lookup_pvp(LookupPvpRequest {
         start_time: Utc::now(),
-        rule: PVPRule::Hoko,
-        mode: PVPMode::X,
+        rule: PvpRule::Hoko,
+        mode: PvpMode::X,
         stages: &[1, 3],
       })
       .unwrap();
@@ -348,10 +348,10 @@ mod tests {
     assert_eq!(li.len(), 0);
 
     let li = conn
-      .lookup_pvp(LookupPVPRequest {
+      .lookup_pvp(LookupPvpRequest {
         start_time: Utc::now(),
-        rule: PVPRule::Asari,
-        mode: PVPMode::Challenge,
+        rule: PvpRule::Asari,
+        mode: PvpMode::Challenge,
         stages: &[1, 3],
       })
       .unwrap();
@@ -359,10 +359,10 @@ mod tests {
     assert_eq!(li.len(), 0);
 
     let li = conn
-      .lookup_pvp(LookupPVPRequest {
+      .lookup_pvp(LookupPvpRequest {
         start_time: Utc::now(),
-        rule: PVPRule::Asari,
-        mode: PVPMode::X,
+        rule: PvpRule::Asari,
+        mode: PvpMode::X,
         stages: &[1, 2],
       })
       .unwrap();
@@ -370,10 +370,10 @@ mod tests {
     assert_eq!(li.len(), 1);
 
     let li = conn
-      .lookup_pvp(LookupPVPRequest {
+      .lookup_pvp(LookupPvpRequest {
         start_time: Utc::now(),
-        rule: PVPRule::Asari,
-        mode: PVPMode::X,
+        rule: PvpRule::Asari,
+        mode: PvpMode::X,
         stages: &[1, 4],
       })
       .unwrap();
@@ -381,10 +381,10 @@ mod tests {
     assert_eq!(li.len(), 0);
 
     let li = conn
-      .lookup_pvp(LookupPVPRequest {
+      .lookup_pvp(LookupPvpRequest {
         start_time: Utc::now(),
-        rule: PVPRule::Asari,
-        mode: PVPMode::X,
+        rule: PvpRule::Asari,
+        mode: PvpMode::X,
         stages: &[16, 17, 18],
       })
       .unwrap();
@@ -395,10 +395,10 @@ mod tests {
     tx.update_query(UpdateQueryRequest {
       uid,
       qid,
-      config: &QueryConfig::PVP {
-        config: PVPQueryConfig {
-          modes: vec![PVPMode::Open, PVPMode::X],
-          rules: vec![PVPRule::Asari],
+      config: &QueryConfig::Pvp {
+        config: PvpQueryConfig {
+          modes: vec![PvpMode::Open, PvpMode::X],
+          rules: vec![PvpRule::Asari],
           includes: vec![10],
           excludes: vec![1, 2],
         },
@@ -408,10 +408,10 @@ mod tests {
     tx.commit().unwrap();
 
     let li = conn
-      .lookup_pvp(LookupPVPRequest {
+      .lookup_pvp(LookupPvpRequest {
         start_time: Utc::now(),
-        rule: PVPRule::Asari,
-        mode: PVPMode::X,
+        rule: PvpRule::Asari,
+        mode: PvpMode::X,
         stages: &[1, 2],
       })
       .unwrap();

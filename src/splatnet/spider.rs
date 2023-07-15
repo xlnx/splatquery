@@ -5,7 +5,7 @@ use crate::BoxError;
 use super::{
   gear,
   schedules::{self, RawCoopNormalSchedule},
-  GearType, PVPMode, PVPRule,
+  GearType, PvpMode, PvpRule,
 };
 
 #[derive(Debug)]
@@ -21,12 +21,12 @@ pub struct GearSpiderItem {
 }
 
 #[derive(Debug, Clone)]
-pub struct PVPSpiderItem {
+pub struct PvpSpiderItem {
   pub start_time: DateTime<Utc>,
   pub end_time: DateTime<Utc>,
-  pub rule: PVPRule,
+  pub rule: PvpRule,
   pub stages: Vec<u32>,
-  pub mode: PVPMode,
+  pub mode: PvpMode,
 }
 
 #[derive(Debug)]
@@ -78,7 +78,7 @@ impl Spider {
 
   pub async fn update_schedules(
     &mut self,
-  ) -> Result<(Vec<PVPSpiderItem>, Vec<CoopSpiderItem>), BoxError> {
+  ) -> Result<(Vec<PvpSpiderItem>, Vec<CoopSpiderItem>), BoxError> {
     let url = "https://splatoon3.ink/data/schedules.json";
     let response = reqwest::get(url).await?;
     log::debug!("GET [{}] -> {}", url, response.status().as_u16());
@@ -148,7 +148,7 @@ impl Spider {
   async fn do_update_schedules(
     &mut self,
     response: schedules::RawSchedulesResponse,
-  ) -> Result<(Vec<PVPSpiderItem>, Vec<CoopSpiderItem>), BoxError> {
+  ) -> Result<(Vec<PvpSpiderItem>, Vec<CoopSpiderItem>), BoxError> {
     let schedules::RawSchedulesData {
       regular_schedules,
       bankara_schedules,
@@ -159,18 +159,18 @@ impl Spider {
     } = response.data;
 
     let mut pvp = vec![];
-    let mut collect_pvp = |mode: PVPMode,
+    let mut collect_pvp = |mode: PvpMode,
                            time_period: schedules::RawTimePeriod,
-                           setting: schedules::RawPVPMatchSetting| {
+                           setting: schedules::RawPvpMatchSetting| {
       let rule = match setting.pvp_rule.id.as_str() {
-        "VnNSdWxlLTA=" => PVPRule::Regular,
-        "VnNSdWxlLTE=" => PVPRule::Area,
-        "VnNSdWxlLTI=" => PVPRule::Yagura,
-        "VnNSdWxlLTM=" => PVPRule::Hoko,
-        "VnNSdWxlLTQ=" => PVPRule::Asari,
-        _ => PVPRule::Unknown,
+        "VnNSdWxlLTA=" => PvpRule::Regular,
+        "VnNSdWxlLTE=" => PvpRule::Area,
+        "VnNSdWxlLTI=" => PvpRule::Yagura,
+        "VnNSdWxlLTM=" => PvpRule::Hoko,
+        "VnNSdWxlLTQ=" => PvpRule::Asari,
+        _ => PvpRule::Unknown,
       };
-      pvp.push(PVPSpiderItem {
+      pvp.push(PvpSpiderItem {
         start_time: time_period.start_time,
         end_time: time_period.end_time,
         rule,
@@ -208,7 +208,7 @@ impl Spider {
         for s in regular_schedules.nodes.into_iter() {
           if s.time_period.start_time > t {
             if let Some(setting) = s.match_setting.regular_match_setting {
-              collect_pvp(PVPMode::Regular, s.time_period, setting);
+              collect_pvp(PvpMode::Regular, s.time_period, setting);
             }
           }
         }
@@ -224,8 +224,8 @@ impl Spider {
         for s in bankara_schedules.nodes.into_iter() {
           if s.time_period.start_time > t {
             if let Some((challenge, open)) = s.match_setting.bankara_match_settings {
-              collect_pvp(PVPMode::Challenge, s.time_period.clone(), challenge);
-              collect_pvp(PVPMode::Open, s.time_period, open);
+              collect_pvp(PvpMode::Challenge, s.time_period.clone(), challenge);
+              collect_pvp(PvpMode::Open, s.time_period, open);
             }
           }
         }
@@ -241,7 +241,7 @@ impl Spider {
         for s in x_schedules.nodes.into_iter() {
           if s.time_period.start_time > t {
             if let Some(setting) = s.match_setting.x_match_setting {
-              collect_pvp(PVPMode::X, s.time_period, setting);
+              collect_pvp(PvpMode::X, s.time_period, setting);
             }
           }
         }
@@ -257,7 +257,7 @@ impl Spider {
         for s in fest_schedules.nodes.into_iter() {
           if s.time_period.start_time > t {
             if let Some(setting) = s.match_setting.fest_match_setting {
-              collect_pvp(PVPMode::Fest, s.time_period, setting);
+              collect_pvp(PvpMode::Fest, s.time_period, setting);
             }
           }
         }

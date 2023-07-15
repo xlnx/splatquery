@@ -1,19 +1,19 @@
-use super::{PVPMode, PVPRule};
+use super::{PvpMode, PvpRule};
 
 pub trait I18N: Send + Sync {
-  fn get_pvp_mode_name(&self, mode: PVPMode) -> String;
-  fn get_pvp_rule_name(&self, rule: PVPRule) -> String;
+  fn get_pvp_mode_name(&self, mode: PvpMode) -> String;
+  fn get_pvp_rule_name(&self, rule: PvpRule) -> String;
   fn get_pvp_stage_name(&self, id: u32) -> String;
 }
 
 pub struct EnUs();
 
 impl I18N for EnUs {
-  fn get_pvp_mode_name(&self, mode: PVPMode) -> String {
+  fn get_pvp_mode_name(&self, mode: PvpMode) -> String {
     mode.to_string()
   }
 
-  fn get_pvp_rule_name(&self, rule: PVPRule) -> String {
+  fn get_pvp_rule_name(&self, rule: PvpRule) -> String {
     rule.to_string()
   }
 

@@ -74,7 +74,7 @@ pub async fn list(
 
   let mut li = Vec::new();
 
-  if qtype.is_none() || qtype.unwrap() == QueryType::PVP {
+  if qtype.is_none() || qtype.unwrap() == QueryType::Pvp {
     li.append(&mut conn.list_query(ListQueryRequest { uid, qid })?);
   }
 

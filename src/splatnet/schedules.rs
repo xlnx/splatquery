@@ -9,19 +9,19 @@ pub struct RawSchedulesResponse {
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct RawSchedulesData {
   #[serde(rename = "regularSchedules")]
-  pub regular_schedules: RawScheduleList<RawPVPSchedule<RawRegularMatchSetting>>,
+  pub regular_schedules: RawScheduleList<RawPvpSchedule<RawRegularMatchSetting>>,
 
   #[serde(rename = "bankaraSchedules")]
-  pub bankara_schedules: RawScheduleList<RawPVPSchedule<RawBankaraMatchSetting>>,
+  pub bankara_schedules: RawScheduleList<RawPvpSchedule<RawBankaraMatchSetting>>,
 
   #[serde(rename = "xSchedules")]
-  pub x_schedules: RawScheduleList<RawPVPSchedule<RawXMatchSetting>>,
+  pub x_schedules: RawScheduleList<RawPvpSchedule<RawXMatchSetting>>,
 
   #[serde(rename = "eventSchedules")]
   pub event_schedules: RawScheduleList<RawEventSchedule>,
 
   #[serde(rename = "festSchedules")]
-  pub fest_schedules: RawScheduleList<RawPVPSchedule<RawFestMatchSetting>>,
+  pub fest_schedules: RawScheduleList<RawPvpSchedule<RawFestMatchSetting>>,
 
   #[serde(rename = "coopGroupingSchedule")]
   pub coop_grouping_schedule: RawCoopGroupingSchedule,
@@ -32,25 +32,25 @@ pub struct RawSchedulesData {
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct RawRegularMatchSetting {
   #[serde(rename = "regularMatchSetting")]
-  pub regular_match_setting: Option<RawPVPMatchSetting>,
+  pub regular_match_setting: Option<RawPvpMatchSetting>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct RawBankaraMatchSetting {
   #[serde(rename = "bankaraMatchSettings")]
-  pub bankara_match_settings: Option<(RawPVPMatchSetting, RawPVPMatchSetting)>,
+  pub bankara_match_settings: Option<(RawPvpMatchSetting, RawPvpMatchSetting)>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct RawXMatchSetting {
   #[serde(rename = "xMatchSetting")]
-  pub x_match_setting: Option<RawPVPMatchSetting>,
+  pub x_match_setting: Option<RawPvpMatchSetting>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct RawFestMatchSetting {
   #[serde(rename = "festMatchSetting")]
-  pub fest_match_setting: Option<RawPVPMatchSetting>,
+  pub fest_match_setting: Option<RawPvpMatchSetting>,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
@@ -64,7 +64,7 @@ where
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 #[serde(bound = "for<'de2> T: Deserialize<'de2>")]
-pub struct RawPVPSchedule<T>
+pub struct RawPvpSchedule<T>
 where
   for<'de2> T: Deserialize<'de2> + PartialEq + Eq,
 {
@@ -101,7 +101,7 @@ pub struct RawLeagueMatchSetting {
   pub league_match_event: RawLeagueMatchEvent,
 
   #[serde(flatten)]
-  pub pvp_match_setting: RawPVPMatchSetting,
+  pub pvp_match_setting: RawPvpMatchSetting,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
@@ -119,16 +119,16 @@ pub struct RawLeagueMatchEvent {
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct RawPVPMatchSetting {
+pub struct RawPvpMatchSetting {
   #[serde(rename = "vsStages")]
-  pub pvp_stages: Vec<RawPVPStage>,
+  pub pvp_stages: Vec<RawPvpStage>,
 
   #[serde(rename = "vsRule")]
-  pub pvp_rule: RawPVPRule,
+  pub pvp_rule: RawPvpRule,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct RawPVPRule {
+pub struct RawPvpRule {
   pub id: String,
 
   pub rule: String,
@@ -137,7 +137,7 @@ pub struct RawPVPRule {
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct RawPVPStage {
+pub struct RawPvpStage {
   pub id: String,
 
   #[serde(rename = "vsStageId")]
@@ -202,7 +202,7 @@ mod test {
     assert_eq!(schedules.data.x_schedules.nodes.len(), 12);
     assert_eq!(
       schedules.data.x_schedules.nodes[0],
-      RawPVPSchedule::<RawXMatchSetting> {
+      RawPvpSchedule::<RawXMatchSetting> {
         time_period: RawTimePeriod {
           start_time: DateTime::parse_from_rfc3339("2023-06-15T16:00:00Z")
             .unwrap()
@@ -212,20 +212,20 @@ mod test {
             .into()
         },
         match_setting: RawXMatchSetting {
-          x_match_setting: Some(RawPVPMatchSetting {
+          x_match_setting: Some(RawPvpMatchSetting {
             pvp_stages: vec![
-              RawPVPStage {
+              RawPvpStage {
                 id: String::from("VnNTdGFnZS0xNA=="),
                 pvp_stage_id: 14,
                 name: String::from("Sturgeon Shipyard")
               },
-              RawPVPStage {
+              RawPvpStage {
                 id: String::from("VnNTdGFnZS0xOA=="),
                 pvp_stage_id: 18,
                 name: String::from("Manta Maria")
               }
             ],
-            pvp_rule: RawPVPRule {
+            pvp_rule: RawPvpRule {
               id: String::from("VnNSdWxlLTI="),
               rule: String::from("LOFT"),
               name: String::from("Tower Control")

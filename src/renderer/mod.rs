@@ -19,7 +19,7 @@ use walkdir::WalkDir;
 
 use crate::{
   database::{Language, TimeZone},
-  splatnet::PVPSpiderItem,
+  splatnet::PvpSpiderItem,
   BoxError,
 };
 
@@ -89,7 +89,7 @@ impl Renderer {
     self.out_dir.clone().into_os_string().into_string().unwrap()
   }
 
-  pub fn render_pvp(&self, item: &PVPSpiderItem, opts: &RenderOptions) -> Result<String, BoxError> {
+  pub fn render_pvp(&self, item: &PvpSpiderItem, opts: &RenderOptions) -> Result<String, BoxError> {
     self.render(
       &format!("pvp.{}", opts.platform),
       || {
@@ -167,7 +167,7 @@ where
   let mo = st.month();
   let md = st.day();
   match tz {
-    TimeZone::Pt | TimeZone::Cest => {
+    TimeZone::Pt | TimeZone::Cet => {
       // let et = st.add(chrono::Duration::hours(2));
       let (st0, st1) = st.hour12();
       let (et0, et1) = (st + chrono::Duration::hours(2)).hour12();
