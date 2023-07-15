@@ -22,20 +22,14 @@
           Active Hours
         </label>
 
-        <!-- <div class="sm:hidden">
-          <label for="tabs" class="sr-only">Select your country</label>
-          <select id="tabs"
-            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-            <option>Profile</option>
-            <option>Canada</option>
-            <option>France</option>
-            <option>Germany</option>
-          </select>
-        </div> -->
-        <!-- hidden sm: -->
-        <ul data-tabs-toggle="#hrs-day-li" role="tablist"
-          class="flex text-sm font-medium text-center text-gray-500 divide-x divide-gray-200 rounded-lg shadow dark:divide-gray-700 dark:text-gray-400">
-          <li class="w-full" v-for="(title, day) in weekdays ">
+        <ul data-tabs-toggle="#hrs-day-li" role="tablist" class="
+            grid grid-cols-7
+            rounded-lg shadow 
+            fmt-xs text-center font-medium 
+            text-gray-500 dark:text-gray-400
+            divide-x 
+            divide-gray-200 dark:divide-gray-700 ">
+          <li v-for="(title, day) in weekdays ">
             <button role="tab" :data-tabs-target="`#hrs-day-${day}`" class="fmt-tab-pill"
               :class="day == 0 ? 'rounded-l-lg' : day == 6 ? 'rounded-r-lg' : ''">
               {{ title }}
@@ -213,13 +207,13 @@ const languages = [
 ]
 
 const weekdays = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
+  "Mon.",
+  "Tues.",
+  "Wed.",
+  "Thur.",
+  "Fri.",
+  "Sat.",
+  "Sun.",
 ]
 
 const dayHrsNever = [
