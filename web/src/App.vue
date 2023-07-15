@@ -8,7 +8,7 @@
             class="font-splatoon1 self-center text-2xl font-semibold whitespace-nowrap fmt-text-primary">SplatQuery</span>
         </a>
         <div class="flex items-center md:order-2 space-x-4">
-          <button
+          <button data-tooltip-target="tips-night-mode"
             class="inline-flex items-center justify-center fmt-text-secondary hover:bg-gray-100 w-10 h-10 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5"
             @click="toggleTheme">
             <svg class="fill-current w-4 h-4" viewBox="0 0 18 20">
@@ -20,7 +20,11 @@
               </path>
             </svg>
           </button>
-          <button type="button"
+          <div id="tips-night-mode" role="tooltip" class="fmt-tips invisible opacity-0">
+            {{ theme == 'dark' ? 'Light' : 'Dark' }} mode
+            <div class="tooltip-arrow" data-popper-arrow></div>
+          </div>
+          <a type="button" data-tooltip-target="tips-user-icon" href="/settings"
             class="flex mr-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600">
             <span class="sr-only">Open user menu</span>
             <div class="relative w-10 h-10 overflow-hidden bg-gray-100 rounded-full dark:bg-gray-600">
@@ -32,7 +36,11 @@
               </svg>
             </div>
             <!-- <img class="w-8 h-8 rounded-full" src="/docs/images/people/profile-picture-3.jpg" alt="user photo"> -->
-          </button>
+          </a>
+          <div id="tips-user-icon" role="tooltip" class="fmt-tips invisible opacity-0">
+            Settings
+            <div class="tooltip-arrow" data-popper-arrow></div>
+          </div>
         </div>
       </div>
     </nav>

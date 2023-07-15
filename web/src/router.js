@@ -13,6 +13,13 @@ const router = createRouter({
       component: () => import("./auth/Google.vue"),
     },
     {
+      path: '/settings',
+      component: () => import("./pages/Settings.vue"),
+      meta: {
+        auth: true,
+      }
+    },
+    {
       path: '/query/new',
       component: () => import("./pages/NewQuery.vue"),
       meta: {

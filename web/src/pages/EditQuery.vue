@@ -103,9 +103,8 @@ const update = async () => {
   }
   submission.value = 'update';
   try {
-    const form = { type: query.type.value, ...query };
-    console.log(form);
-    await axios.post(import.meta.env.VITE_API_SERVER + `/query/update?qid=${props.qid}`, form);
+    const data = { type: query.type.value, ...query };
+    await axios.post(import.meta.env.VITE_API_SERVER + `/query/update?qid=${props.qid}`, data);
     window.location.replace('/query/list');
   } catch (err) {
     console.error(err);
