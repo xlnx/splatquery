@@ -1,4 +1,4 @@
-use std::{fs::File, sync::Arc};
+use std::{fs::File, str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
 use r2d2_sqlite::rusqlite::{Connection, Transaction};
@@ -94,13 +94,14 @@ impl ActionAgent for WebPushActionAgent {
     id: i64,
     msg: Arc<Message>,
   ) -> Result<()> {
-    let (sub, os): (_, String) = {
+    let (sub, os, language, time_zone): (_, String, String, String) = {
       let conn = ctx.database.get()?;
       let mut stmt = conn.prepare_cached(
         "
-        SELECT endpoint, p256dh, auth, os
+        SELECT endpoint, p256dh, auth, os, language, time_zone
         FROM webpush_ext_info
-        WHERE id = ?1
+          INNER JOIN users ON users.id = uid
+        WHERE webpush_ext_info.id = ?1
         ",
       )?;
       stmt.query_row((&id,), |row| {
@@ -113,9 +114,15 @@ impl ActionAgent for WebPushActionAgent {
             },
           },
           row.get(3)?,
+          row.get(4)?,
+          row.get(5)?,
         ))
       })?
     };
+    let language =
+      Language::from_str(&language).map_err(|err| Error::InternalServerError(Box::new(err)))?;
+    let time_zone =
+      TimeZone::from_str(&time_zone).map_err(|err| Error::InternalServerError(Box::new(err)))?;
     let payload = match msg.as_ref() {
       Message::PVP(item) => {
         let i18n = EnUs();
@@ -136,8 +143,8 @@ impl ActionAgent for WebPushActionAgent {
         };
         let img_opts = RenderOptions {
           platform,
-          language: Language::EnUs,
-          time_zone: TimeZone::Pt,
+          language,
+          time_zone,
         };
         let img_path = ctx
           .renderer

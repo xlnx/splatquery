@@ -186,7 +186,7 @@ where
           wd = ["月", "水", "火", "木", "金", "土", "日"][st.weekday() as usize]
         )
       } else {
-        format!("{mo}/{md} {st1}:00 ~ {et1}:00")
+        format!("{mo}/{md} {st1}:00 - {et1}:00")
       }
     }
   }
