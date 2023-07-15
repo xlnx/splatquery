@@ -46,3 +46,7 @@ jobs:
         bucket: splatquery-hk
         endpoint: oss-cn-hongkong.aliyuncs.com
         folder: ./web/dist
+        notFoundPage: index.html
+        htmlCacheControl: no-cache
+        imageCacheControl: max-age=864001
+        otherCacheControl: max-age=2592001
