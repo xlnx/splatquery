@@ -1,11 +1,13 @@
 use appendlist::AppendList;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, Timelike, Utc};
 use r2d2_sqlite::rusqlite::Connection;
 
 use crate::{
   splatnet::{PVPMode, PVPRule},
   Error, Result,
 };
+
+use super::TimeZone;
 
 fn fold_stage_mask(stages: &[u32]) -> u32 {
   stages.iter().fold(0u32, |a, b| a | (1 << (b - 1)))
@@ -115,24 +117,43 @@ impl CreatePVPQuery for Connection {
 
 impl LookupPVP for Connection {
   fn lookup_pvp(&self, request: LookupPVPRequest) -> Result<AppendList<LookupPVPResponse>> {
-    let mode = request.mode as u8;
-    let rule = request.rule as u8;
-    let stages = fold_stage_mask(request.stages);
-    let start_time = request.start_time.timestamp();
-    let mut stmt = self.prepare_cached(
+    let LookupPVPRequest {
+      start_time,
+      rule,
+      mode,
+      stages,
+    } = request;
+    let mode = mode as u8;
+    let rule = rule as u8;
+    let stages = fold_stage_mask(stages);
+    let ts = start_time.timestamp();
+    let t = TimeZone::Jst.convert(start_time);
+    let a = t.weekday() as u32;
+    let b = t.hour() / 2;
+    let day_hrs = if a < 4 { "day_hrs_0" } else { "day_hrs_1" };
+    let day_hrs_v = (1 << b) << 12 * (a % 4);
+    // FIXME: add tests
+    let sql = format!(
       "
       SELECT user_actions.id, uid_1, act_agent
       FROM (
         SELECT uid as uid_1
         FROM pvp_queries 
-        WHERE modes & ?1 AND rules & ?2 AND includes & ?3 AND NOT (excludes & ?3)
+          INNER JOIN users ON uid = users.id
+        WHERE 
+          {day_hrs} & ?5 AND
+          modes & ?1 AND 
+          rules & ?2 AND 
+          includes & ?3 AND 
+          NOT (excludes & ?3)
       ) 
         INNER JOIN user_action_agents ON uid_1 == user_action_agents.uid
         INNER JOIN user_actions ON aid == user_action_agents.id
       WHERE act_active AND rx_pvp < ?4
-      ",
-    )?;
-    let iter = stmt.query_map((&mode, &rule, &stages, &start_time), |row| {
+      "
+    );
+    let mut stmt = self.prepare_cached(&sql)?;
+    let iter = stmt.query_map((&mode, &rule, &stages, &ts, &day_hrs_v), |row| {
       Ok(LookupPVPResponse {
         id: row.get(0)?,
         uid: row.get(1)?,
@@ -234,7 +255,7 @@ mod tests {
         CreateQuery, CreateQueryRequest, PVPQueryConfig, QueryConfig, UpdateQuery,
         UpdateQueryRequest,
       },
-      user::{CreateUser, CreateUserRequest, LookupUser, LookupUserRequest},
+      user::{CreateUser, CreateUserRequest, LookupUserId, LookupUserIdRequest},
       Database,
     },
     splatnet::PVPMode,
@@ -256,11 +277,14 @@ mod tests {
         email: None,
         name: None,
         picture: None,
+        language: None,
+        time_zone: None,
+        day_hrs: None,
       })
       .unwrap();
     assert!(ok);
     let uid = conn
-      .lookup_user(LookupUserRequest {
+      .lookup_user_id(LookupUserIdRequest {
         auth_agent,
         auth_uid,
       })

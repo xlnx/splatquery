@@ -1,7 +1,7 @@
 use crate::{
   database::{
     action::{DeleteAction, ListAction, ToggleAction},
-    user::{LookupUser, LookupUserRequest},
+    user::{LookupUserId, LookupUserIdRequest},
   },
   Error, Result,
 };
@@ -30,7 +30,7 @@ pub struct ListResponse {
 pub async fn list(User(user): User, State(state): State<AppState>) -> Result<impl IntoResponse> {
   let InnerAppState { db, actions, .. } = state.0.as_ref();
   let conn = db.get()?;
-  let uid = conn.lookup_user(LookupUserRequest {
+  let uid = conn.lookup_user_id(LookupUserIdRequest {
     auth_agent: &user.agent,
     auth_uid: &user.id,
   })?;
@@ -69,7 +69,7 @@ pub async fn delete(
 ) -> Result<()> {
   let InnerAppState { db, .. } = state.0.as_ref();
   let conn = db.get()?;
-  let uid = conn.lookup_user(LookupUserRequest {
+  let uid = conn.lookup_user_id(LookupUserIdRequest {
     auth_agent: &user.agent,
     auth_uid: &user.id,
   })?;
@@ -90,7 +90,7 @@ pub async fn toggle(
 ) -> Result<impl IntoResponse> {
   let InnerAppState { db, .. } = state.0.as_ref();
   let conn = db.get()?;
-  let uid = conn.lookup_user(LookupUserRequest {
+  let uid = conn.lookup_user_id(LookupUserIdRequest {
     auth_agent: &user.agent,
     auth_uid: &user.id,
   })?;

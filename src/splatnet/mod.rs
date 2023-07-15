@@ -44,17 +44,6 @@ pub enum PVPRule {
   Asari = 16,
 }
 
-#[derive(
-  Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str, EnumIter,
-)]
-#[serde(rename_all = "lowercase")]
-pub enum Region {
-  US,
-  EU,
-  CN,
-  JP,
-}
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GearType {
   Unknown = 0,

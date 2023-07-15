@@ -10,10 +10,11 @@ use web_push::{
 };
 
 use crate::{
-  database::action::CreateAction,
+  database::{action::CreateAction, Language, TimeZone},
+  renderer::RenderOptions,
   splatnet::{
     i18n::{EnUs, I18N},
-    Message, Region,
+    Message,
   },
   Error, Result,
 };
@@ -128,14 +129,19 @@ impl ActionAgent for WebPushActionAgent {
         let title = format!("{} - {}", rule, mode);
         let body = format!("[{}] & [{}]", stages[0], stages[1]);
         let tag = base64::encode(format!("pvp-[{}]-[{}]", item.mode, item.start_time));
-        let variant = if os.starts_with("Windows") {
+        let platform = if os.starts_with("Windows") {
           "pc"
         } else {
           "mobile"
         };
+        let img_opts = RenderOptions {
+          platform,
+          language: Language::EnUs,
+          time_zone: TimeZone::Pt,
+        };
         let img_path = ctx
           .renderer
-          .render_pvp(item, variant, Region::JP)
+          .render_pvp(item, &img_opts)
           .map_err(|err| Error::InternalServerError(err))?;
         serde_json::to_vec(&json!({
           "title": title,

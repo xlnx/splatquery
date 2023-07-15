@@ -9,9 +9,12 @@ use serde::{Deserialize, Serialize};
 pub mod action;
 pub mod auth;
 pub mod config;
+#[cfg(feature = "api-geoip2")]
+pub mod geoip2;
 pub mod jwt;
 pub mod query;
 pub mod state;
+pub mod user;
 
 #[derive(Serialize, Deserialize)]
 pub struct UserInfo {

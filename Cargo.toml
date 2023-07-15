@@ -20,6 +20,7 @@ api = [
   "dep:tower-http",
   "dep:jsonwebtoken",
 ]
+api-geoip2 = ["api", "dep:maxminddb"]
 api-auth-google = ["api"]
 webpush = ["api", "dep:web-push"]
 renderer = [
@@ -29,7 +30,7 @@ renderer = [
   "dep:walkdir",
   "dep:image",
 ]
-full = ["api", "api-auth-google", "webpush", "renderer"]
+full = ["api", "api-geoip2", "api-auth-google", "webpush", "renderer"]
 
 [dependencies]
 appendlist = { git = "https://github.com/xlnx/appendlist.git" }
@@ -51,6 +52,7 @@ image = { version = "0.24.6", default-features = false, features = [
 itertools = "0.11.0"
 jsonwebtoken = { version = "8.3.0", optional = true }
 log = "0.4.19"
+maxminddb = { version = "0.23.0", optional = true }
 minijinja = { version = "1.0.4", optional = true, features = ["loader"] }
 r2d2 = "0.8.10"
 r2d2_sqlite = "0.22.0"

@@ -6,7 +6,7 @@ use splatquery::{
   action::{config::ActionAgentsConfig, ActionContext, ActionManager},
   database::{
     query::{CreateQuery, CreateQueryRequest, QueryConfig},
-    user::{CreateUser, CreateUserRequest, LookupUser, LookupUserRequest},
+    user::{CreateUser, CreateUserRequest, LookupUserId, LookupUserIdRequest},
     Database,
   },
   splatnet::{SplatNetAgent, SplatNetConfig},
@@ -67,9 +67,12 @@ async fn main() -> Result<(), BoxError> {
     name: None,
     email: None,
     picture: None,
+    language: None,
+    time_zone: None,
+    day_hrs: None,
   })?;
   assert!(ok);
-  let uid = conn.lookup_user(LookupUserRequest {
+  let uid = conn.lookup_user_id(LookupUserIdRequest {
     auth_agent,
     auth_uid,
   })?;

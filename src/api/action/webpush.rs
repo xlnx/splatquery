@@ -6,7 +6,7 @@ use crate::{
     state::{AppState, InnerAppState},
     User,
   },
-  database::user::{LookupUser, LookupUserRequest},
+  database::user::{LookupUserId, LookupUserIdRequest},
   Result,
 };
 
@@ -20,7 +20,7 @@ pub async fn subscribe(
   let mut conn = db.get()?;
 
   // find the specified user
-  let uid = conn.lookup_user(LookupUserRequest {
+  let uid = conn.lookup_user_id(LookupUserIdRequest {
     auth_agent: &user.agent,
     auth_uid: &user.id,
   })?;

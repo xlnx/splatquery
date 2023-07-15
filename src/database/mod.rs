@@ -1,7 +1,11 @@
 use std::{ops::Deref, path::Path};
 
+use chrono::{DateTime, FixedOffset};
 use r2d2::Pool;
 use r2d2_sqlite::{rusqlite::Connection, SqliteConnectionManager};
+use serde::Deserialize;
+use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
+use strum_macros::EnumIter;
 
 use crate::Result;
 
@@ -9,6 +13,45 @@ pub mod action;
 pub mod pvp;
 pub mod query;
 pub mod user;
+
+#[derive(
+  Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str, EnumIter,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum Language {
+  EnUs,
+}
+
+#[derive(
+  Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str, EnumIter,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum TimeZone {
+  Jst = 9,
+  Pt = -7,
+  Cest = 2,
+  Cst = 8,
+}
+
+impl TimeZone {
+  pub fn convert<T>(self, t: DateTime<T>) -> DateTime<FixedOffset>
+  where
+    T: chrono::TimeZone,
+  {
+    t.with_timezone(&FixedOffset::east_opt(self as i32 * 3600).unwrap())
+  }
+}
+
+#[derive(Deserialize)]
+pub struct DatabaseConfig {
+  pub path: String,
+}
+
+impl DatabaseConfig {
+  pub fn collect(self) -> Result<Database> {
+    Database::new_from_file(self.path)
+  }
+}
 
 #[derive(Clone)]
 pub struct Database(Pool<SqliteConnectionManager>);
@@ -48,6 +91,10 @@ fn do_init(conn: &mut Connection) -> Result<(), r2d2_sqlite::rusqlite::Error> {
       name                TEXT,
       email               TEXT,
       picture             TEXT,
+      language            TEXT NOT NULL,
+      time_zone           TEXT NOT NULL,
+      day_hrs_0           INTEGER NOT NULL,   /* jst wd [0,4), 12 bits for each day  */
+      day_hrs_1           INTEGER NOT NULL,   /* [4,7) */
       UNIQUE ( auth_uid, auth_agent )
     );
 
@@ -55,7 +102,7 @@ fn do_init(conn: &mut Connection) -> Result<(), r2d2_sqlite::rusqlite::Error> {
     pvp_queries (
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
       uid                 INTEGER NOT NULL,
-      created_time        DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_time        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       modes               TINYINT NOT NULL,
       rules               TINYINT NOT NULL,
       includes            INT NOT NULL,
@@ -84,12 +131,12 @@ fn do_init(conn: &mut Connection) -> Result<(), r2d2_sqlite::rusqlite::Error> {
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
       uid                 INTEGER NOT NULL,
       aid                 INTEGER NOT NULL,
-      rx_pvp              INTEGER DEFAULT 0,
-      rx_event            INTEGER DEFAULT 0,
-      rx_coop             INTEGER DEFAULT 0,
-      rx_coop_ex          INTEGER DEFAULT 0,
-      rx_gear             INTEGER DEFAULT 0,
-      rx_gear_brand       INTEGER DEFAULT 0,
+      rx_pvp              INTEGER NOT NULL DEFAULT 0,
+      rx_event            INTEGER NOT NULL DEFAULT 0,
+      rx_coop             INTEGER NOT NULL DEFAULT 0,
+      rx_coop_ex          INTEGER NOT NULL DEFAULT 0,
+      rx_gear             INTEGER NOT NULL DEFAULT 0,
+      rx_gear_brand       INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY ( aid ) REFERENCES user_action_agents ( id ) ON DELETE CASCADE
     );
 

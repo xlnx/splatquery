@@ -5,7 +5,7 @@ use std::{
   sync::{Arc, RwLock},
 };
 
-use chrono::Duration;
+use chrono::{DateTime, Datelike, Duration, Timelike};
 use image::{codecs::jpeg::JpegEncoder, ColorType, ImageEncoder};
 use itertools::Itertools;
 use minijinja::{context, path_loader, Environment};
@@ -18,7 +18,8 @@ use ttl_cache::TtlCache;
 use walkdir::WalkDir;
 
 use crate::{
-  splatnet::{PVPSpiderItem, Region},
+  database::{Language, TimeZone},
+  splatnet::PVPSpiderItem,
   BoxError,
 };
 
@@ -34,6 +35,12 @@ pub struct RendererConfig {
 
 fn default_cache_size() -> usize {
   1024
+}
+
+pub struct RenderOptions<'a> {
+  pub platform: &'a str,
+  pub language: Language,
+  pub time_zone: TimeZone,
 }
 
 pub struct Renderer {
@@ -82,15 +89,9 @@ impl Renderer {
     self.out_dir.clone().into_os_string().into_string().unwrap()
   }
 
-  pub fn render_pvp(
-    &self,
-    item: &PVPSpiderItem,
-    variant: &str,
-    region: Region,
-  ) -> Result<String, BoxError> {
-    let start_time = item.start_time.to_rfc3339();
+  pub fn render_pvp(&self, item: &PVPSpiderItem, opts: &RenderOptions) -> Result<String, BoxError> {
     self.render(
-      &format!("pvp.{}", variant),
+      &format!("pvp.{}", opts.platform),
       || {
         let stages: Vec<_> = item
           .stages
@@ -101,10 +102,15 @@ impl Renderer {
           mode => item.mode.to_string(),
           rule => item.rule.to_string(),
           stages => stages,
-          start_time => &start_time,
+          start_time => &fmt_time_range_2h(item.start_time, opts.time_zone),
         )
       },
-      &[&start_time, &item.mode.to_string(), &region.to_string()],
+      &[
+        &opts.time_zone.to_string(),
+        &item.mode.to_string(),
+        &item.start_time.day().to_string(),
+        &item.start_time.hour().to_string(),
+      ],
     )
   }
 
@@ -151,4 +157,37 @@ impl Renderer {
   }
 
   // pub async fn get(&self, id: &str) -> Option<Arc<Vec<u8>>> {}
+}
+
+fn fmt_time_range_2h<T>(st: DateTime<T>, tz: TimeZone) -> String
+where
+  T: chrono::TimeZone,
+{
+  let st = tz.convert(st);
+  let mo = st.month();
+  let md = st.day();
+  match tz {
+    TimeZone::Pt | TimeZone::Cest => {
+      // let et = st.add(chrono::Duration::hours(2));
+      let (st0, st1) = st.hour12();
+      let (et0, et1) = (st + chrono::Duration::hours(2)).hour12();
+      let [st0, et0] = [st0, et0].map(|t| ["AM", "PM"][t as usize]);
+      format!(
+        "{mo}/{md}. {st1} {st0} - {et1} {et0} {tz}",
+        tz = tz.to_string().to_uppercase(),
+      )
+    }
+    TimeZone::Jst | TimeZone::Cst => {
+      let st1 = st.hour();
+      let et1 = st1 + 2;
+      if tz == TimeZone::Jst {
+        format!(
+          "{mo}/{md}({wd}) {st1}:00 - {et1}:00",
+          wd = ["月", "水", "火", "木", "金", "土", "日"][st.weekday() as usize]
+        )
+      } else {
+        format!("{mo}/{md} {st1}:00 ~ {et1}:00")
+      }
+    }
+  }
 }

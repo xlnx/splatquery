@@ -12,7 +12,7 @@ use crate::{
       CreateQuery, CreateQueryRequest, DeleteQuery, DeleteQueryRequest, ListQuery,
       ListQueryRequest, QueryConfig, QueryType, UpdateQuery, UpdateQueryRequest,
     },
-    user::{LookupUser, LookupUserRequest},
+    user::{LookupUserId, LookupUserIdRequest},
   },
   Error, Result,
 };
@@ -32,7 +32,7 @@ pub async fn create(
   let conn = db.get()?;
 
   // find the specified user
-  let uid = conn.lookup_user(LookupUserRequest {
+  let uid = conn.lookup_user_id(LookupUserIdRequest {
     auth_agent: &user.agent,
     auth_uid: &user.id,
   })?;
@@ -67,7 +67,7 @@ pub async fn list(
   let conn = db.get()?;
 
   // find the specified user
-  let uid = conn.lookup_user(LookupUserRequest {
+  let uid = conn.lookup_user_id(LookupUserIdRequest {
     auth_agent: &user.agent,
     auth_uid: &user.id,
   })?;
@@ -99,7 +99,7 @@ pub async fn update(
   let conn = db.get()?;
 
   // find the specified user
-  let uid = conn.lookup_user(LookupUserRequest {
+  let uid = conn.lookup_user_id(LookupUserIdRequest {
     auth_agent: &user.agent,
     auth_uid: &user.id,
   })?;
@@ -130,7 +130,7 @@ pub async fn delete(
   let conn = db.get()?;
 
   // find the specified user
-  let uid = conn.lookup_user(LookupUserRequest {
+  let uid = conn.lookup_user_id(LookupUserIdRequest {
     auth_agent: &user.agent,
     auth_uid: &user.id,
   })?;

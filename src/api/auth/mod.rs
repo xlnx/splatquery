@@ -1,18 +1,23 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
 use axum::{
   async_trait,
-  extract::{Path, State},
+  extract::{ConnectInfo, Path, State},
   response::{AppendHeaders, IntoResponse},
   Json,
 };
 use http::header::AUTHORIZATION;
+#[cfg(feature = "api-geoip2")]
+use maxminddb::geoip2::country::Country;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
   api::UserInfo,
-  database::user::{CreateUser, CreateUserRequest},
+  database::{
+    user::{CreateUser, CreateUserRequest},
+    Language, TimeZone,
+  },
   Error, Result,
 };
 
@@ -45,6 +50,7 @@ pub trait AuthAgent: Send + Sync {
 pub async fn oauth2(
   Path(agent_type): Path<String>,
   State(state): State<AppState>,
+  #[cfg(feature = "api-geoip2")] ConnectInfo(addr): ConnectInfo<SocketAddr>,
   Json(request): Json<AuthRequest>,
 ) -> Result<impl IntoResponse> {
   let InnerAppState {
@@ -52,6 +58,7 @@ pub async fn oauth2(
     db,
     jwt,
     auth_expiration,
+    geoip2,
     ..
   } = state.0.as_ref();
 
@@ -64,6 +71,48 @@ pub async fn oauth2(
   // send oauth2 request to auth server
   let auth = agent.oauth2(&request).await?;
 
+  let mut language = None;
+  let mut time_zone = None;
+
+  #[cfg(feature = "api-geoip2")]
+  if let Some(geoip2) = geoip2 {
+    if let Ok(country) = geoip2.lookup::<Country>(addr.ip()) {
+      // https://dev.maxmind.com/geoip/docs/databases/city-and-country
+      // https://www.geonames.org/
+      (time_zone, language) = match country {
+        Country {
+          is_in_european_union: Some(true /* EU */),
+          ..
+        } => {
+          log::debug!("{:?} -> [cest/enus]", country);
+          (Some(TimeZone::Cest), Some(Language::EnUs))
+        }
+        Country {
+          geoname_id: Some(1861060 /* JP */),
+          ..
+        } => {
+          log::debug!("{:?} -> [jst/enus]", country);
+          (Some(TimeZone::Jst), Some(Language::EnUs))
+        }
+        Country {
+          geoname_id: Some(1814991 /* CHN */),
+          ..
+        } => {
+          log::debug!("{:?} -> [cst/enus]", country);
+          (Some(TimeZone::Cst), Some(Language::EnUs))
+        }
+        Country {
+          geoname_id: Some(6252001 /* US */) | Some(6251999 /* CA */),
+          ..
+        } => {
+          log::debug!("{:?} -> [pdt/enus]", country);
+          (Some(TimeZone::Pt), Some(Language::EnUs))
+        }
+        _ => (None, None),
+      };
+    }
+  }
+
   // store userinfo to db
   let ok = db.get()?.create_user(CreateUserRequest {
     auth_agent: &agent_type,
@@ -71,6 +120,9 @@ pub async fn oauth2(
     name: auth.name.as_deref(),
     email: auth.email.as_deref(),
     picture: auth.picture.as_deref(),
+    language,
+    time_zone,
+    day_hrs: None,
   })?;
 
   if ok {

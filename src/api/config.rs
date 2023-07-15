@@ -5,9 +5,13 @@ use serde::Deserialize;
 
 #[cfg(feature = "renderer")]
 use crate::renderer::RendererConfig;
-use crate::{action::config::ActionAgentsConfig, splatnet::SplatNetConfig, Result};
+use crate::{
+  action::config::ActionAgentsConfig, database::DatabaseConfig, splatnet::SplatNetConfig, Result,
+};
 
 use super::auth::AuthAgentMap;
+#[cfg(feature = "api-geoip2")]
+use super::geoip2::GeoIp2Config;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -18,6 +22,8 @@ pub struct Config {
   pub auth: AuthConfig,
   #[serde(default)]
   pub actions: ActionAgentsConfig,
+  #[serde(default)]
+  pub geoip2: Option<GeoIp2Config>,
   #[cfg(feature = "renderer")]
   pub renderer: RendererConfig,
 }
@@ -42,6 +48,7 @@ pub struct TlsConfig {
   pub key: String,
 }
 
+// auth config
 #[derive(Deserialize)]
 pub struct AuthConfig {
   #[serde(default)]
@@ -62,11 +69,6 @@ pub struct TokenConfig {
   pub secret: String,
   #[serde(default = "default_token_expire_days")]
   pub expire_days: i64,
-}
-
-#[derive(Deserialize)]
-pub struct DatabaseConfig {
-  pub path: String,
 }
 
 fn default_token_algorithm() -> Algorithm {

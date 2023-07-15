@@ -24,7 +24,6 @@ use splatquery::{
     jwt,
     state::{AppState, InnerAppState},
   },
-  database::Database,
   splatnet::SplatNetAgent,
   BoxError, Error,
 };
@@ -66,7 +65,7 @@ async fn main() -> Result<(), BoxError> {
   let config: Config = serde_json::from_reader(reader)?;
 
   // prepare database agent
-  let db = Database::new_from_file(config.database.path)?;
+  let db = config.database.collect()?;
 
   #[cfg(feature = "renderer")]
   let renderer = Renderer::new(config.renderer)?;
@@ -94,6 +93,13 @@ async fn main() -> Result<(), BoxError> {
   let jwt = jwt::Agent::new(config.auth.token.algorithm, &config.auth.token.secret);
   let auth_expiration = Duration::days(config.auth.token.expire_days);
 
+  #[cfg(feature = "api-geoip2")]
+  let geoip2 = if let Some(conf) = config.geoip2 {
+    Some(conf.collect()?)
+  } else {
+    None
+  };
+
   // prepare splatnet agent
   let splatnet = SplatNetAgent::new(actions.clone(), config.splatnet)
     .watch()
@@ -106,10 +112,15 @@ async fn main() -> Result<(), BoxError> {
     actions,
     auths,
     auth_expiration,
+    #[cfg(feature = "api-geoip2")]
+    geoip2,
   }));
 
   let app = Router::new()
     .route("/status", get(|| async { Json(json!({"status": "ok"})) }))
+    // user apis
+    .route("/user/list", get(api::user::list))
+    .route("/user/update", post(api::user::update))
     // query apis
     .route("/query/new", post(api::query::create))
     .route("/query/list", get(api::query::list))
@@ -139,7 +150,7 @@ async fn main() -> Result<(), BoxError> {
   log::info!("listening on {}", addr);
 
   let server = axum_server::bind_rustls(addr, tls)
-    .serve(app.into_make_service())
+    .serve(app.into_make_service_with_connect_info::<SocketAddr>())
     .map_err(|err| Error::InternalServerError(Box::new(err)));
 
   futures::try_join!(splatnet, server)?;

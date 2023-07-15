@@ -5,7 +5,7 @@ use chrono::Duration;
 
 use crate::{action::ActionManager, database::Database};
 
-use super::{auth::AuthAgentMap, jwt};
+use super::{auth::AuthAgentMap, geoip2::GeoIp2, jwt};
 
 #[derive(Clone)]
 pub struct AppState(pub Arc<InnerAppState>);
@@ -16,6 +16,8 @@ pub struct InnerAppState {
   pub actions: ActionManager,
   pub auths: Arc<AuthAgentMap>,
   pub auth_expiration: Duration,
+  #[cfg(feature = "api-geoip2")]
+  pub geoip2: Option<GeoIp2>,
 }
 
 impl FromRef<AppState> for Database {
