@@ -1,16 +1,17 @@
 use std::{fs::File, str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
+use chrono::Utc;
 use r2d2_sqlite::rusqlite::{Connection, Transaction};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use web_push::{
   ContentEncoding, PartialVapidSignatureBuilder, SubscriptionInfo, SubscriptionKeys,
   VapidSignatureBuilder, WebPushClient, WebPushMessageBuilder,
 };
 
 use crate::{
-  database::{action::CreateAction, Language, TimeZone},
+  database::{action::CreateAction, Database, Language, TimeZone},
   renderer::RenderOptions,
   splatnet::{
     i18n::{EnUs, I18N},
@@ -91,79 +92,141 @@ impl ActionAgent for WebPushActionAgent {
   async fn emit(
     self: Arc<Self>,
     ctx: Arc<ActionContext>,
+    uid: i64,
     id: i64,
     msg: Arc<Message>,
   ) -> Result<()> {
-    let (sub, os, language, time_zone): (_, String, String, String) = {
-      let conn = ctx.database.get()?;
+    let msg = |ua| {
+      let UserAgent {
+        os,
+        language,
+        time_zone,
+        ..
+      } = ua;
+      match msg.as_ref() {
+        Message::Pvp(item) => {
+          let i18n = EnUs();
+          let mode = i18n.get_pvp_mode_name(item.mode);
+          let rule = i18n.get_pvp_rule_name(item.rule);
+          let stages: Vec<_> = item
+            .stages
+            .iter()
+            .map(|id| i18n.get_pvp_stage_name(*id))
+            .collect();
+          let title = format!("{} - {}", rule, mode);
+          let body = format!("[{}] & [{}]", stages[0], stages[1]);
+          let tag = base64::encode(format!("pvp-[{}]-[{}]", item.mode, item.start_time));
+          let platform = match os {
+            Some(os) if os.starts_with("Windows") => "pc",
+            _ => "mobile",
+          };
+          let img_opts = RenderOptions {
+            platform,
+            language,
+            time_zone,
+          };
+          let img_path = ctx
+            .renderer
+            .render_pvp(item, &img_opts)
+            .map_err(|err| Error::InternalServerError(err))?;
+          Ok(json!({
+            "title": title,
+            "options": {
+              "body": body,
+              "image": format!("{}/{}", ctx.image_url, img_path),
+              "icon": "https://splatquery.koishi.top/logo.svg",
+              "silent": true,
+              "tag": tag,
+              "timestamp": item.start_time.timestamp_millis(),
+            }
+          }))
+        }
+      }
+    };
+    self.send(ctx.database.clone(), uid, id, msg).await
+  }
+
+  async fn test(self: Arc<Self>, db: Database, uid: i64, id: i64) -> Result<()> {
+    self
+      .send(db, uid, id, |ua| {
+        Ok(json!({
+          "title": "Test notification",
+          "options": {
+            "body": format!("Browser: [{:?}]\nDevice: [{:?}]\nOS: [{:?}]", ua.browser, ua.device, ua.os),
+            "icon": "https://splatquery.koishi.top/logo.svg",
+            "silent": false,
+            "tag": Utc::now().to_rfc3339()
+          }
+        }))
+      })
+      .await
+  }
+}
+
+struct UserAgent {
+  browser: Option<String>,
+  device: Option<String>,
+  os: Option<String>,
+  language: Language,
+  time_zone: TimeZone,
+}
+
+impl WebPushActionAgent {
+  async fn send<F>(self: Arc<Self>, db: Database, uid: i64, id: i64, msg: F) -> Result<()>
+  where
+    F: FnOnce(UserAgent) -> Result<Value>,
+  {
+    let (sub, browser, device, os, language, time_zone): (
+      _,
+      Option<String>,
+      Option<String>,
+      Option<String>,
+      String,
+      String,
+    ) = {
+      let conn = db.get()?;
       let mut stmt = conn.prepare_cached(
         "
-        SELECT endpoint, p256dh, auth, os, language, time_zone
+        SELECT endpoint, p256dh, auth, browser, device, os, language, time_zone
         FROM webpush_ext_info
           INNER JOIN users ON users.id = uid
-        WHERE webpush_ext_info.id = ?1
+        WHERE uid = ?1 AND webpush_ext_info.id = ?2
         ",
       )?;
-      stmt.query_row((&id,), |row| {
-        Ok((
-          SubscriptionInfo {
-            endpoint: row.get(0)?,
-            keys: SubscriptionKeys {
-              p256dh: row.get(1)?,
-              auth: row.get(2)?,
+      stmt
+        .query_row((&uid, &id), |row| {
+          Ok((
+            SubscriptionInfo {
+              endpoint: row.get(0)?,
+              keys: SubscriptionKeys {
+                p256dh: row.get(1)?,
+                auth: row.get(2)?,
+              },
             },
-          },
-          row.get(3)?,
-          row.get(4)?,
-          row.get(5)?,
-        ))
-      })?
+            row.get(3)?,
+            row.get(4)?,
+            row.get(5)?,
+            row.get(6)?,
+            row.get(7)?,
+          ))
+        })
+        .map_err(|err| match err {
+          r2d2_sqlite::rusqlite::Error::QueryReturnedNoRows => Error::Unauthorized,
+          _ => Error::SqliteError(err),
+        })?
     };
     let language =
       Language::from_str(&language).map_err(|err| Error::InternalServerError(Box::new(err)))?;
     let time_zone =
       TimeZone::from_str(&time_zone).map_err(|err| Error::InternalServerError(Box::new(err)))?;
-    let payload = match msg.as_ref() {
-      Message::Pvp(item) => {
-        let i18n = EnUs();
-        let mode = i18n.get_pvp_mode_name(item.mode);
-        let rule = i18n.get_pvp_rule_name(item.rule);
-        let stages: Vec<_> = item
-          .stages
-          .iter()
-          .map(|id| i18n.get_pvp_stage_name(*id))
-          .collect();
-        let title = format!("{} - {}", rule, mode);
-        let body = format!("[{}] & [{}]", stages[0], stages[1]);
-        let tag = base64::encode(format!("pvp-[{}]-[{}]", item.mode, item.start_time));
-        let platform = if os.starts_with("Windows") {
-          "pc"
-        } else {
-          "mobile"
-        };
-        let img_opts = RenderOptions {
-          platform,
-          language,
-          time_zone,
-        };
-        let img_path = ctx
-          .renderer
-          .render_pvp(item, &img_opts)
-          .map_err(|err| Error::InternalServerError(err))?;
-        serde_json::to_vec(&json!({
-          "title": title,
-          "options": {
-            "body": body,
-            "image": format!("{}/{}", ctx.image_url, img_path),
-            "icon": "https://splatquery.koishi.top/logo.svg",
-            "silent": true,
-            "tag": tag,
-            "timestamp": item.start_time.timestamp_millis(),
-          }
-        }))
-        .map_err(|err| Error::InternalServerError(Box::new(err)))?
-      }
-    };
+    let payload = serde_json::to_vec(&msg(UserAgent {
+      browser,
+      device,
+      os,
+      language,
+      time_zone,
+    })?)
+    .map_err(|err| Error::InternalServerError(Box::new(err)))?;
 
     let vapid = self
       .vapid

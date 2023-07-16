@@ -15,10 +15,11 @@ impl ActionAgent for InfoLogActionAgent {
   async fn emit(
     self: Arc<Self>,
     _ctx: Arc<ActionContext>,
+    uid: i64,
     id: i64,
     msg: Arc<Message>,
   ) -> Result<()> {
-    log::info!("id[{}] <- [{:?}]", id, msg);
+    log::info!("uid[{}], id[{}] <- [{:?}]", uid, id, msg);
     Ok(())
   }
 }

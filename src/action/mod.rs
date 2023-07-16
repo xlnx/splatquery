@@ -33,8 +33,17 @@ pub trait ActionAgent: std::fmt::Debug + Send + Sync {
     Ok(None)
   }
 
-  async fn emit(self: Arc<Self>, ctx: Arc<ActionContext>, id: i64, msg: Arc<Message>)
-    -> Result<()>;
+  async fn emit(
+    self: Arc<Self>,
+    ctx: Arc<ActionContext>,
+    uid: i64,
+    id: i64,
+    msg: Arc<Message>,
+  ) -> Result<()>;
+
+  async fn test(self: Arc<Self>, _db: Database, _uid: i64, _id: i64) -> Result<()> {
+    Ok(())
+  }
 }
 
 pub struct ActionContext {
@@ -92,20 +101,23 @@ impl ActionManager {
           let mut attempt_idx = 0;
           move || {
             attempt_idx += 1;
-            agent.clone().emit(ctx.clone(), id, msg.clone()).map_err({
-              let agent = act_agent.clone();
-              move |err| {
-                log::warn!(
-                  "emit {}#{} for uid[{}] (attempt#{}) failed: [{:?}]",
-                  agent,
-                  id,
-                  uid,
-                  attempt_idx,
-                  err
-                );
-                backoff::Error::transient(err)
-              }
-            })
+            agent
+              .clone()
+              .emit(ctx.clone(), uid, id, msg.clone())
+              .map_err({
+                let agent = act_agent.clone();
+                move |err| {
+                  log::warn!(
+                    "emit {}#{} for uid[{}] (attempt#{}) failed: [{:?}]",
+                    agent,
+                    id,
+                    uid,
+                    attempt_idx,
+                    err
+                  );
+                  backoff::Error::transient(err)
+                }
+              })
           }
         });
         let task = task.and_then({

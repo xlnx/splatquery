@@ -97,3 +97,28 @@ pub async fn toggle(
   conn.toggle_action(uid, &agent, request.active)?;
   Ok(())
 }
+
+#[derive(Deserialize)]
+pub struct TestActionRequest {
+  id: i64,
+}
+
+pub async fn test(
+  User(user): User,
+  State(state): State<AppState>,
+  Path(agent): Path<String>,
+  Query(request): Query<TestActionRequest>,
+) -> Result<()> {
+  let InnerAppState { db, actions, .. } = state.0.as_ref();
+  let conn = db.get()?;
+  let agent = actions
+    .agents
+    .get(agent.as_str())
+    .ok_or_else(|| Error::InvalidParameter("test", agent))?;
+  let uid = conn.lookup_user_id(LookupUserIdRequest {
+    auth_agent: &user.agent,
+    auth_uid: &user.id,
+  })?;
+  agent.clone().test(db.clone(), uid, request.id).await?;
+  Ok(())
+}

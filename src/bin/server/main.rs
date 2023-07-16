@@ -128,6 +128,7 @@ async fn main() -> Result<(), BoxError> {
     .route("/query/delete", post(api::query::delete))
     // action apis
     .route("/action/:agent/toggle", post(api::action::toggle))
+    .route("/action/:agent/test", post(api::action::test))
     .route("/action/list", get(api::action::list))
     .route("/action/delete", post(api::action::delete))
     // auth apis
