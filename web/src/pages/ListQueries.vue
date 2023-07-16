@@ -9,7 +9,7 @@
         </div>
       </Card>
     </div>
-    <div class="m-2 sm:m-3 lg:m-4" v-for="query in queries">
+    <div class="m-2 sm:m-3 lg:m-4" v-for="query in queries" :key="query.qid">
       <QueryCard :href="`/query/edit?qid=${query.qid}&qtype=${query.config.type}`" :qtype="query.config.type"
         :query="query.config" :createdTime="query.created_time" />
     </div>
@@ -25,7 +25,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, inject } from 'vue';
 import { initFlowbite } from 'flowbite'
 import axios from 'axios';
 import { backOff } from "exponential-backoff";
@@ -36,6 +36,7 @@ import ServerDown from '../components/ServerDown.vue';
 
 onMounted(initFlowbite);
 
+const mq = inject('mq');
 const queries = ref();
 const failed = ref();
 
@@ -51,7 +52,7 @@ onMounted(async () => {
       numOfAttempts: 5,
     });
   } catch (err) {
-    console.error(err);
+    mq.value.error(err);
     failed.value = true;
   }
 })

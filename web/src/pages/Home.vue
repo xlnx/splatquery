@@ -45,7 +45,6 @@ const auth = useAuth();
 
 const login = {
   google: () => {
-    // console.log(auth.token());
     auth.oauth2('google', {
       params: {
         client_id: '44914949790-b1csnno86fmhl0pnbv9jgfoc7tp8i97r.apps.googleusercontent.com',
@@ -70,22 +69,4 @@ onMounted(async () => {
     showLoginBar.value = true;
   }
 })
-
-// const rule = ref("area");
-// const toggleRule = (newRule) => rule.value = newRule;
-
-// const toggleWebPush = async () => {
-//   // FIXME: add alert when not available
-//   if (!props.query.endpoints.webPush) {
-//     const serviceWorker = window.navigator.serviceWorker;
-//     const registration = await serviceWorker.getRegistration();
-//     const subscription = await registration.pushManager.subscribe({
-//       userVisibleOnly: true,
-//       applicationServerKey: "BDKNzkxVCQM1T131qz1Ctoz3f8t2sNge-uD7D216Wi1rrVaOYfl1r_ZYNKD2LgYAVWjXVZdUHvU0BNnVhdGJSA0",
-//     })
-//     console.log(subscription);
-//   }
-//   props.query.endpoints.webPush = !props.query.endpoints.webPush;
-// }
-// const toggleIFTTT = () => props.query.endpoints.ifttt = !props.query.endpoints.ifttt;
 </script>

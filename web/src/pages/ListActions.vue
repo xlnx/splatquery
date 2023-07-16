@@ -15,7 +15,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, inject } from 'vue';
 import { initFlowbite } from 'flowbite'
 import axios from 'axios';
 import { backOff } from "exponential-backoff";
@@ -25,6 +25,7 @@ import WebPushActionCard from '../components/WebPushActionCard.vue';
 
 onMounted(initFlowbite);
 
+const mq = inject('mq');
 const actions = ref();
 const failed = ref();
 
@@ -50,9 +51,8 @@ onMounted(async () => {
       webpush: { sub: [] },
       ...map,
     }
-    console.log(JSON.parse(JSON.stringify(actions.value)));
   } catch (err) {
-    console.error(err);
+    mq.value.error(err);
     failed.value = true;
   }
 })

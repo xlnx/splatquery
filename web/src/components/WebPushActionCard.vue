@@ -14,7 +14,7 @@
       Devices
     </label>
     <div class="grid grid-flow-row-dense grid-cols-1 sm:grid-cols-2 lg:grid-cols-1">
-      <div class="m-2" v-for="ua in agents">
+      <div class="m-2" v-for="ua in agents" :key="ua.endpoint">
         <div class="flex fmt-webpush-ua w-full h-full rounded-xl border fmt-border-color">
           <div class="p-2 flex flex-1 space-x-2">
             <img class="inline-block w-12" :src="getBrowserImgUrl(ua.browser)" />
@@ -51,7 +51,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, inject } from 'vue';
 import { initFlowbite } from 'flowbite'
 import axios from 'axios';
 import UAParser from 'ua-parser-js'
@@ -69,6 +69,7 @@ const props = defineProps({
   defaultConfig: Array,
 })
 
+const mq = inject('mq');
 const submission = ref();
 const endpoint = ref();
 const active = ref(props.defaultActive);
@@ -76,12 +77,40 @@ const agents = ref(props.defaultConfig || []);
 const isRegistered = computed(() => agents.value.some(e => e.endpoint && endpoint.value == e.endpoint));
 
 const subscribeImpl = async () => {
-  const reg = await navigator.serviceWorker.getRegistration();
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: "BDKNzkxVCQM1T131qz1Ctoz3f8t2sNge-uD7D216Wi1rrVaOYfl1r_ZYNKD2LgYAVWjXVZdUHvU0BNnVhdGJSA0",
-  });
-  const { endpoint, keys } = sub.toJSON()
+  const { Notification } = window;
+  if (!Notification) {
+    throw 'Notification is not supported by your browser.';
+  }
+  try {
+    await Notification.requestPermission();
+  } catch (err) {
+    throw 'Notification permission denied.'
+  }
+  const { serviceWorker } = navigator;
+  if (!serviceWorker) {
+    throw 'You have to quit private mode to use webpush, or maybe your browser doesn\'t support service workers.'
+  }
+  let registration = null;
+  try {
+    registration = await serviceWorker.register('/sw.js', { scope: '/', type: 'module' });
+    if (!registration) { throw null; }
+  } catch (err) {
+    throw 'Register service worker failed, please contact the developer for help.'
+  }
+  const { pushManager } = registration;
+  if (!pushManager) {
+    throw 'WebPush is not supported by your browser.'
+  }
+  let subInfo = null;
+  try {
+    subInfo = await pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: "BDKNzkxVCQM1T131qz1Ctoz3f8t2sNge-uD7D216Wi1rrVaOYfl1r_ZYNKD2LgYAVWjXVZdUHvU0BNnVhdGJSA0",
+    });
+  } catch (err) {
+    throw 'WebPush permission denied.'
+  }
+  const { endpoint, keys } = subInfo.toJSON()
   const info = new UAParser(navigator.userAgent).getResult()
   const agent = {
     endpoint, keys,
@@ -103,6 +132,8 @@ const subscribeImpl = async () => {
   delete agent.p256dh;
   delete agent.auth;
   agents.value.push({ id, ...agent });
+
+  mq.value.success("Subscribe success.")
 }
 
 const dismissImpl = async ({ id }) => {
@@ -121,6 +152,8 @@ const dismissImpl = async ({ id }) => {
   if (idx >= 0) {
     agents.value.splice(idx, 1);
   }
+
+  mq.value.info("Dismiss success.")
 }
 
 const subscribe = async () => {
@@ -128,7 +161,7 @@ const subscribe = async () => {
   try {
     await subscribeImpl();
   } catch (err) {
-    console.error(err);
+    mq.value.error(err);
   }
   submission.value = null;
 }
@@ -138,7 +171,7 @@ const dismiss = async (ua) => {
   try {
     await dismissImpl(ua);
   } catch (err) {
-    console.error(err);
+    mq.value.error(err);
   }
   submission.value = null;
 }
@@ -160,8 +193,13 @@ const toggle = async (newActive) => {
       numOfAttempts: 5,
     });
     active.value = newActive;
+    if (active.value) {
+      mq.value.success("WebPush notifications on.")
+    } else {
+      mq.value.info("WebPush notifications off.")
+    }
   } catch (err) {
-    console.error(err);
+    mq.value.error(err);
   }
   submission.value = null;
 }

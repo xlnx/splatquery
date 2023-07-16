@@ -7,13 +7,31 @@
 
 html, body, #app {
   @apply
-  m-0
+  m-0 !important;
+}
+
+html {
+  @apply
   h-full;
+}
+
+body {
+  @apply
+  overflow-x-hidden;
+}
+
+body, #app, main {
+  @apply
+  min-h-[100vh];
+}
+
+#app {
+  @apply
+  overflow-hidden;
 }
 
 main {
   @apply
-  min-h-full
   max-h-fit;
 }
 

@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, inject } from 'vue';
 import { initFlowbite } from 'flowbite'
 import axios from 'axios';
 import PVPQuery from '../components/PVPQuery.vue';
@@ -42,6 +42,7 @@ import LoadingCircle from '../components/LoadingCircle.vue';
 
 onMounted(initFlowbite);
 
+const mq = inject('mq');
 const type = ref('pvp');
 const form = ref();
 const submission = ref();
@@ -58,7 +59,7 @@ const create = async () => {
     await axios.post(import.meta.env.VITE_API_SERVER + '/query/new', form);
     window.location.replace('/query/list');
   } catch (err) {
-    console.error(err);
+    mq.value.error(err);
   }
   submission.value = null;
 }

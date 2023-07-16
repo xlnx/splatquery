@@ -43,7 +43,7 @@
               <div class="flex flex-col"
                 v-for="(hrs, i) in [dayHrsNever.concat(dayHrs.slice(0, 6)), dayHrsNever.concat(dayHrs.slice(6))]">
                 <select v-model="form.dayHrs[day][i]" multiple class="fmt-form-input w-full flex-1">
-                  <option :value="hr.id" v-for="hr in hrs">
+                  <option :value="hr.id" v-for="hr in hrs" :key="hr.id">
                     {{ hr.name }}
                   </option>
                 </select>
@@ -72,7 +72,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUpdated, ref } from 'vue';
+import { computed, inject, onMounted, onUpdated, ref } from 'vue';
 import { initFlowbite } from 'flowbite';
 import axios from 'axios';
 import { backOff } from 'exponential-backoff';
@@ -84,6 +84,7 @@ import ServerDown from '../components/ServerDown.vue';
 onMounted(initFlowbite)
 onUpdated(initFlowbite)
 
+const mq = inject('mq');
 const form = ref();
 const submission = ref();
 const failed = ref();
@@ -130,7 +131,7 @@ const toJstDayHrs = (hrs, tz) => {
   hrs = hrs.map(e => e >> x);
   return [hrs.slice(0, 4), hrs.slice(4)].map(li => {
     let v = 0;
-    for (let e of li.reverse()) {
+    for (let e of li.slice().reverse()) {
       v *= (1 << 12);
       v += e & ((1 << 12) - 1);
     }
@@ -155,7 +156,7 @@ onMounted(async () => {
       dayHrs: toLocalDayHrs(data.day_hrs, data.time_zone),
     }
   } catch (err) {
-    console.error(err);
+    mq.value.error(err);
     failed.value = true;
   }
 });
@@ -169,8 +170,9 @@ const update = async () => {
       day_hrs: toJstDayHrs(form.value.dayHrs, form.value.timeZone),
     }
     await axios.post(import.meta.env.VITE_API_SERVER + `/user/update`, data);
+    mq.value.success('Settings update success.')
   } catch (err) {
-    console.error(err);
+    mq.value.error(err);
   }
   submission.value = null;
 }

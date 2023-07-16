@@ -43,7 +43,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, inject } from 'vue';
 import { initFlowbite } from 'flowbite'
 import axios from 'axios';
 import { backOff } from "exponential-backoff";
@@ -60,6 +60,7 @@ const props = defineProps({
   qid: Number,
 })
 
+const mq = inject('mq');
 const query = ref();
 const form = ref();
 const failed = ref();
@@ -91,7 +92,7 @@ onMounted(async () => {
     }
     query.value = config;
   } catch (err) {
-    console.error(err);
+    mq.value.error(err);
     failed.value = true;
   }
 })
@@ -107,7 +108,7 @@ const update = async () => {
     await axios.post(import.meta.env.VITE_API_SERVER + `/query/update?qid=${props.qid}`, data);
     window.location.replace('/query/list');
   } catch (err) {
-    console.error(err);
+    mq.value.error(err);
   }
   submission.value = null;
 }
@@ -118,7 +119,7 @@ const remove = async () => {
     await axios.post(import.meta.env.VITE_API_SERVER + `/query/delete?qid=${props.qid}&qtype=${props.qtype}`);
     window.location.replace('/query/list');
   } catch (err) {
-    console.error(err);
+    mq.value.error(err);
   }
   submission.value = null;
 }

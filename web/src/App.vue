@@ -48,20 +48,26 @@
     <div class="max-w-screen-xl mx-auto px-2 sm:px-4 md:px-6">
       <router-view />
     </div>
+
+    <MessageQueue ref="mq" />
   </main>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, provide, ref } from 'vue'
 import { initFlowbite } from 'flowbite'
 import { useAuth } from '@websanova/vue-auth/src/v3.js';
+import MessageQueue from './components/MessageQueue.vue';
 
 onMounted(initFlowbite);
 
 const auth = useAuth();
 
+const mq = ref();
 const theme = ref(localStorage.theme)
 const user = ref();
+
+provide('mq', mq);
 
 const toggleTheme = () => {
   localStorage.theme = theme.value != 'dark' ? 'dark' : 'light';
