@@ -25,9 +25,13 @@
               </label>
             </div>
           </div>
-          <div class="flex flex-col justify-end">
-            <button class="inline-block w-full h-full fmt-button fmt-alert fmt-webpush-ua-dismiss fmt-sm"
-              :disabled="!!submission" @click="dismiss(ua)">
+          <div class="flex flex-col justify-end p-2 space-y-2">
+            <button class="inline-block w-full h-full fmt-button fmt-xs" :disabled="!!submission" @click="test(ua)">
+              <LoadingCircle class="h-4 w-4" v-if="submission == 'test' + ua.endpoint" />
+              <span>Test</span>
+            </button>
+            <button class="inline-block w-full h-full fmt-button fmt-alert fmt-xs" :disabled="!!submission"
+              @click="dismiss(ua)">
               <LoadingCircle class="h-4 w-4" v-if="submission == ua.endpoint" />
               <span>Dismiss</span>
             </button>
@@ -170,6 +174,26 @@ const dismiss = async (ua) => {
   submission.value = ua.endpoint;
   try {
     await dismissImpl(ua);
+  } catch (err) {
+    mq.value.error(err);
+  }
+  submission.value = null;
+}
+
+const test = async ({ id, endpoint }) => {
+  submission.value = 'test' + endpoint;
+  try {
+    // submit agent to server
+    await backOff(async () => {
+      const response = await axios.post(import.meta.env.VITE_API_SERVER + `/action/webpush/test?id=${id}`)
+      if (response.status != 200) {
+        throw response;
+      }
+      return response.data;
+    }, {
+      numOfAttempts: 5,
+    });
+    mq.value.info("You should receive a notification in a while.")
   } catch (err) {
     mq.value.error(err);
   }

@@ -168,6 +168,11 @@ main {
   disabled:opacity-75;
 }
 
+.fmt-button.fmt-xs {
+  @apply
+  sm:py-1.5 px-2.5;
+}
+
 .fmt-button.fmt-alert {
   @apply
   bg-red-700 hover:bg-red-800 
@@ -221,12 +226,6 @@ main {
 a.fmt-webpush-ua {
   @apply
   overflow-visible;
-}
-
-.fmt-button.fmt-alert.fmt-webpush-ua-dismiss {
-  @apply
-  px-2
-  rounded-l-none;
 }
 
 .fmt-tips {
