@@ -6,7 +6,10 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: () => import("./pages/Home.vue"),
+      component: (
+        window.matchMedia('(display-mode: standalone)').matches ?
+        () => import("./pages/Pwa.vue") : () => import("./pages/Home.vue")
+      )
     },
     {
       path: '/login/google',

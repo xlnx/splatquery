@@ -7,7 +7,7 @@
     bg-red-200 dark:bg-red-900 
     text-lg font-medium text-center 
     text-red-800 dark:text-red-200">
-    server failed to response.
+    server failed to respond.
   </div>
 </template>
 

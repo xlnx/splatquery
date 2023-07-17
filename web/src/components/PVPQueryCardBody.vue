@@ -9,23 +9,14 @@
       <img v-for="rule in rules" :src="getRuleImgUrl(rule)" />
     </div>
   </div>
-  <div class="p-4">
-    <span class="text-2xl font-bold tracking-tight fmt-text-primary pr-2">PVP</span>
-    <span class="font-normal fmt-text-secondary">{{ localTime }}</span>
-  </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
 import { getModeImgUrl, getRuleImgUrl, getPVPStageImgUrl } from '../utils'
 
 const props = defineProps({
   modes: Array,
   rules: Array,
   includes: Array,
-  createdTime: String,
 })
-
-const localTime = computed(() => new Date(props.createdTime + " UTC").toLocaleDateString());
-
 </script>
