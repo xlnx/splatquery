@@ -65,7 +65,7 @@ import LoadingCircle from '../components/LoadingCircle.vue';
 import Toggle from '../components/Toggle.vue';
 import { getBrowserImgUrl } from '../utils';
 import { backOff } from 'exponential-backoff';
-import { getWebPushSubInfo } from '../webpush';
+import { getSubInfo } from '../webpush';
 
 onMounted(initFlowbite);
 
@@ -82,7 +82,7 @@ const agents = ref(props.defaultConfig || []);
 const isRegistered = computed(() => agents.value.some(e => e.endpoint && endpoint.value == e.endpoint));
 
 const subscribeImpl = async () => {
-  const { endpoint, keys } = await getWebPushSubInfo()
+  const { endpoint, keys } = await getSubInfo()
   const info = new UAParser(navigator.userAgent).getResult()
   const agent = {
     endpoint, keys,

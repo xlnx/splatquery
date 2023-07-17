@@ -1,4 +1,13 @@
-const getWebPushSubInfo = async () => {
+const tryGetSubInfo = async () => {
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    return await registration.pushManager.getSubscription();
+  } catch (err) {
+    return null;
+  }
+}
+
+const getSubInfo = async () => {
   const { Notification } = window;
   if (!Notification) {
     throw 'Notification is not supported by your browser.';
@@ -36,5 +45,6 @@ const getWebPushSubInfo = async () => {
 }
 
 export {
-  getWebPushSubInfo
+  tryGetSubInfo,
+  getSubInfo,
 }

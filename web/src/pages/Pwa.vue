@@ -16,7 +16,7 @@ import { useAuth } from '@websanova/vue-auth/src/v3';
 import { inject, onMounted, ref } from 'vue';
 import axios from 'axios';
 import UAParser from 'ua-parser-js';
-import { getWebPushSubInfo } from '../webpush';
+import { tryGetSubInfo, getSubInfo } from '../webpush';
 import { backOff } from 'exponential-backoff';
 import Home from './Home.vue';
 import Loading from '../components/Loading.vue';
@@ -50,9 +50,8 @@ const subscribe = async ({ endpoint, keys }) => {
   });
 }
 
-const validate = async () => {
-  const endpoint = localStorage.__pwa_ep;
-  // FIXME: impl verify
+const validate = async ({ endpoint, keys }) => {
+  // TODO: test whether this endpoint is valid at server side
 }
 
 onMounted(async () => {
@@ -63,20 +62,31 @@ onMounted(async () => {
     return;
   }
 
-  // ep already registered
-  if (!!localStorage.__pwa_ep) {
-    validate();
+  let subInfo = await tryGetSubInfo();
+  if (localStorage.__pwa_ep) {
+    if (!subInfo || subInfo && localStorage.__pwa_ep != subInfo.endpoint) {
+      // endpoint invalidated
+      localStorage.removeItem('__pwa_ep');
+      subInfo = null;
+    }
+  }
+
+  // ep valid
+  if (localStorage.__pwa_ep) {
     showMain.value = true;
+    validate(subInfo);
     return;
   }
 
   // check webpush permission
-  let subInfo, reason;
-  try {
-    subInfo = await getWebPushSubInfo();
-  } catch (err) {
-    // TODO: impl reasons
-    reason = 'permission';
+  let reason;
+  if (!subInfo) {
+    try {
+      subInfo = await getSubInfo();
+    } catch (err) {
+      // TODO: impl reasons
+      reason = 'permission';
+    }
   }
   if (!subInfo) {
     // permission denied
