@@ -21,15 +21,15 @@
       </button>
     </div>
     <div class="flex flex-col space-y-4 sm:flex-row sm:justify-center sm:space-y-0 sm:space-x-4" v-if="showMain">
-      <a type="button" class="fmt-button fmt-lg" href="query/new">
+      <router-link type="button" class="fmt-button fmt-lg" to="/query/new">
         + New Query
-      </a>
-      <a type="button" class="fmt-button fmt-lg" href="query/list">
+      </router-link>
+      <router-link type="button" class="fmt-button fmt-lg" to="/query/list">
         List Queries
-      </a>
-      <a type="button" class="fmt-button fmt-lg" href="action/list">
+      </router-link>
+      <router-link type="button" class="fmt-button fmt-lg" to="/action/list">
         List Actions
-      </a>
+      </router-link>
     </div>
   </div>
 </template>

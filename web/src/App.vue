@@ -2,11 +2,11 @@
   <main class="font-splatoon2 bg-white dark:bg-gray-900 transition-colors">
     <nav class="fmt-border-color bg-gray-50 dark:bg-gray-800 mb-4 transition-colors">
       <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-        <a href="/" class="flex items-center">
+        <router-link to="/" class="flex items-center">
           <img src="/logo.svg" class="h-8 mr-3" alt="Flowbite Logo" />
           <span
             class="font-splatoon1 self-center text-2xl font-semibold whitespace-nowrap fmt-text-primary">SplatQuery</span>
-        </a>
+        </router-link>
         <div class="flex items-center md:order-2 space-x-4">
           <button data-tooltip-target="tips-night-mode"
             class="inline-flex items-center justify-center fmt-text-secondary hover:bg-gray-100 w-10 h-10 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5"
@@ -24,7 +24,7 @@
             {{ theme == 'dark' ? 'Light' : 'Dark' }} mode
             <div class="tooltip-arrow" data-popper-arrow></div>
           </div>
-          <a type="button" data-tooltip-target="tips-user-icon" href="/settings"
+          <router-link to="/settings" type="button" data-tooltip-target="tips-user-icon"
             class="flex mr-3 text-sm bg-gray-800 rounded-full md:mr-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600">
             <span class="sr-only">Open user menu</span>
             <div class="relative w-10 h-10 overflow-hidden bg-gray-100 rounded-full dark:bg-gray-600">
@@ -36,7 +36,7 @@
               </svg>
             </div>
             <!-- <img class="w-8 h-8 rounded-full" src="/docs/images/people/profile-picture-3.jpg" alt="user photo"> -->
-          </a>
+          </router-link>
           <div id="tips-user-icon" role="tooltip" class="fmt-tips invisible opacity-0">
             Settings
             <div class="tooltip-arrow" data-popper-arrow></div>
