@@ -14,8 +14,9 @@ export default defineConfig({
       filename: 'sw.js',
       strategies: 'injectManifest',
       registerType: "autoUpdate",
-      includeAssets: ['/**/*'],
-      includeManifestIcons: true,
+      includeAssets: [
+        'logo.svg',
+      ],
       manifest: {
         name: "SplatQuery",
         short_name: "SplatQuery",
