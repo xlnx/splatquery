@@ -17,6 +17,7 @@ export default defineConfig({
       includeAssets: [
         'logo.svg',
       ],
+      includeManifestIcons: false,
       manifest: {
         name: "SplatQuery",
         short_name: "SplatQuery",
