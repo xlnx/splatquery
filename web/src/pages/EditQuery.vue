@@ -32,70 +32,26 @@
       </div>
     </div>
   </div>
-
-  <div v-if="!query && !failed">
-    <Loading />
-  </div>
-
-  <div v-if="failed">
-    <ServerDown />
-  </div>
 </template>
 
 <script setup>
 import { ref, onMounted, inject } from 'vue';
 import { initFlowbite } from 'flowbite'
 import axios from 'axios';
-import { backOff } from "exponential-backoff";
 import PVPQuery from '../components/PVPQuery.vue';
 import CoopQuery from '../components/CoopQuery.vue';
 import LoadingCircle from '../components/LoadingCircle.vue';
-import Loading from '../components/Loading.vue';
-import ServerDown from '../components/ServerDown.vue';
 
 onMounted(initFlowbite);
 
 const props = defineProps({
-  qtype: String,
   qid: Number,
+  query: Object,
 })
 
 const mq = inject('mq');
-const query = ref();
 const form = ref();
-const failed = ref();
 const submission = ref();
-
-onMounted(async () => {
-  try {
-    if (!props.qtype) {
-      throw `qtype=[${props.qtype}] is invalid`;
-    }
-    if (!Number.isInteger(props.qid)) {
-      throw `qid=[${props.qid}] is not an integer`;
-    }
-    const li = await backOff(async () => {
-      const response = await axios.get(import.meta.env.VITE_API_SERVER + `/query/list?qtype=${props.qtype}&qid=${props.qid}`);
-      if (response.status != 200) {
-        throw response;
-      }
-      return response.data;
-    }, {
-      numOfAttempts: 5,
-    });
-    if (li.length != 1) {
-      throw `li.length:[${li.length}] != [1]`;
-    }
-    const { qid, config } = li[0];
-    if (qid != props.qid) {
-      throw `qid:[${qid}]!=[${props.qid}]`;
-    }
-    query.value = config;
-  } catch (err) {
-    mq.value.error(err);
-    failed.value = true;
-  }
-})
 
 const update = async () => {
   const query = form.value.validate();
@@ -116,7 +72,7 @@ const update = async () => {
 const remove = async () => {
   submission.value = 'remove';
   try {
-    await axios.post(import.meta.env.VITE_API_SERVER + `/query/delete?qid=${props.qid}&qtype=${props.qtype}`);
+    await axios.post(import.meta.env.VITE_API_SERVER + `/query/delete?qid=${props.qid}&qtype=${props.query.qtype}`);
     window.location.replace('/query/list');
   } catch (err) {
     mq.value.error(err);

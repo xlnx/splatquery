@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { Base64 } from 'js-base64';
 
 const router = createRouter({
   // hashbang: false,
@@ -8,7 +9,7 @@ const router = createRouter({
       path: '/',
       component: (
         window.matchMedia('(display-mode: standalone)').matches ?
-        () => import("./pages/Pwa.vue") : () => import("./pages/Home.vue")
+          () => import("./pages/Pwa.vue") : () => import("./pages/Home.vue")
       )
     },
     {
@@ -39,7 +40,10 @@ const router = createRouter({
     {
       path: '/query/edit',
       component: () => import("./pages/EditQuery.vue"),
-      props: route => ({ qtype: route.query.qtype, qid: parseInt(route.query.qid) }),
+      props: route => {
+        const { qid, config } = JSON.parse(Base64.decode(route.query.query));
+        return { qid, query: config };
+      },
       meta: {
         auth: true,
       }

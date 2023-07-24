@@ -12,7 +12,7 @@
       </router-link>
     </div>
     <div class="m-2 sm:m-3 lg:m-4" v-for="query in queries" :key="query.qid">
-      <router-link :to="`/query/edit?qid=${query.qid}&qtype=${query.config.type}`">
+      <router-link :to="{ path: '/query/edit', query: { query: Base64.encodeURI(JSON.stringify(query)) } }">
         <QueryCard :qtype="query.config.type" :query="query.config" :createdTime="query.created_time" />
       </router-link>
     </div>
@@ -31,6 +31,7 @@
 import { ref, onMounted, inject } from 'vue';
 import { initFlowbite } from 'flowbite'
 import axios from 'axios';
+import { Base64 } from 'js-base64';
 import { backOff } from "exponential-backoff";
 import Card from '../components/Card.vue';
 import QueryCard from '../components/QueryCard.vue';
