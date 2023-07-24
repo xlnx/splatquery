@@ -36,11 +36,13 @@
 
 <script setup>
 import { ref, onMounted, inject } from 'vue';
+import { useRouter } from 'vue-router';
 import { initFlowbite } from 'flowbite'
 import axios from 'axios';
 import PVPQuery from '../components/PVPQuery.vue';
 import CoopQuery from '../components/CoopQuery.vue';
 import LoadingCircle from '../components/LoadingCircle.vue';
+import { invalidateCache } from '../utils';
 
 onMounted(initFlowbite);
 
@@ -49,6 +51,7 @@ const props = defineProps({
   query: Object,
 })
 
+const router = useRouter();
 const mq = inject('mq');
 const form = ref();
 const submission = ref();
@@ -62,7 +65,8 @@ const update = async () => {
   try {
     const data = { type: query.type.value, ...query };
     await axios.post(import.meta.env.VITE_API_SERVER + `/query/update?qid=${props.qid}`, data);
-    window.location.replace('/query/list');
+    await invalidateCache('api', import.meta.env.VITE_API_SERVER + '/query/list');
+    router.replace('/query/list');
   } catch (err) {
     mq.value.error(err);
   }
@@ -72,8 +76,9 @@ const update = async () => {
 const remove = async () => {
   submission.value = 'remove';
   try {
-    await axios.post(import.meta.env.VITE_API_SERVER + `/query/delete?qid=${props.qid}&qtype=${props.query.qtype}`);
-    window.location.replace('/query/list');
+    await axios.post(import.meta.env.VITE_API_SERVER + `/query/delete?qid=${props.qid}&qtype=${props.query.type}`);
+    await invalidateCache('api', import.meta.env.VITE_API_SERVER + '/query/list');
+    router.replace('/query/list');
   } catch (err) {
     mq.value.error(err);
   }

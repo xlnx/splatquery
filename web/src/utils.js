@@ -28,10 +28,18 @@ const getBrowserImgUrl = (key) => {
   return `/img/browser/${m[key.toLowerCase()] || 'chromium.svg'}`
 }
 
+const invalidateCache = async (cacheName, url) => {
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    registration.active.postMessage({ type: 'invalidateCache', params: { cacheName, url } });
+  } catch (err) { }
+}
+
 export {
   getModeImgUrl,
   getRuleImgUrl,
   getPVPStageImgUrl,
   getCoopStageImgUrl,
   getBrowserImgUrl,
+  invalidateCache,
 }

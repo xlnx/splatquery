@@ -80,6 +80,7 @@ import Select from '../components/Select.vue'
 import LoadingCircle from '../components/LoadingCircle.vue'
 import Loading from '../components/Loading.vue';
 import ServerDown from '../components/ServerDown.vue';
+import { invalidateCache } from '../utils';
 
 onMounted(initFlowbite)
 onUpdated(initFlowbite)
@@ -169,7 +170,9 @@ const update = async () => {
       time_zone: form.value.timeZone,
       day_hrs: toJstDayHrs(form.value.dayHrs, form.value.timeZone),
     }
-    await axios.post(import.meta.env.VITE_API_SERVER + `/user/update`, data);
+    await axios.post(import.meta.env.VITE_API_SERVER + '/user/update', data);
+    await invalidateCache('api', import.meta.env.VITE_API_SERVER + '/user/list');
+    await axios.get(import.meta.env.VITE_API_SERVER + '/user/list');
     mq.value.success('Settings update success.')
   } catch (err) {
     mq.value.error(err);

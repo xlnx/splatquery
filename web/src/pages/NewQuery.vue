@@ -34,14 +34,17 @@
 
 <script setup>
 import { ref, onMounted, inject } from 'vue';
+import { useRouter } from 'vue-router';
 import { initFlowbite } from 'flowbite'
 import axios from 'axios';
 import PVPQuery from '../components/PVPQuery.vue';
 import CoopQuery from '../components/CoopQuery.vue';
 import LoadingCircle from '../components/LoadingCircle.vue';
+import { invalidateCache } from '../utils';
 
 onMounted(initFlowbite);
 
+const router = useRouter();
 const mq = inject('mq');
 const type = ref('pvp');
 const form = ref();
@@ -57,7 +60,8 @@ const create = async () => {
     const form = { type: type.value, ...query };
     console.log(form);
     await axios.post(import.meta.env.VITE_API_SERVER + '/query/new', form);
-    window.location.replace('/query/list');
+    await invalidateCache('api', import.meta.env.VITE_API_SERVER + '/query/list');
+    router.replace('/query/list');
   } catch (err) {
     mq.value.error(err);
   }

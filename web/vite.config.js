@@ -81,6 +81,10 @@ export default defineConfig({
           scope: "/",
           src: "/sw.js"
         }
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module',
       }
     })
   ],
