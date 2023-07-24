@@ -25,7 +25,8 @@ const isApiUrl = ({ origin, pathname }) => {
     api = self.location.origin + api;
   }
   const url = new URL(api);
-  return origin == url.origin && pathname.startsWith(url.pathname);
+  const cacheUrls = ['/query/list', '/user/list']
+  return origin == url.origin && pathname.startsWith(url.pathname) && cacheUrls.findIndex(e => pathname.endsWith(e)) >= 0;
 }
 
 registerRoute(new Route(({ request }) => isApiUrl(new URL(request.url)), new StaleWhileRevalidate({
