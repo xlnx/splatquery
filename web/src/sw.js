@@ -1,11 +1,7 @@
-import { clientsClaim } from 'workbox-core';
 import { registerRoute, Route } from 'workbox-routing';
 import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching";
-
-self.skipWaiting();
-clientsClaim();
 
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
