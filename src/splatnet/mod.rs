@@ -105,7 +105,7 @@ impl SplatNetAgent {
   pub async fn watch(self: Arc<Self>) -> Result<(), BoxError> {
     let update_gears = self
       .clone()
-      .poll(self.gear_update_interval, Duration::hours(2), |this| {
+      .poll(self.gear_update_interval, Duration::hours(4), |this| {
         Box::pin(async move {
           match this.state.write().await.update_gear().await {
             Ok(gears) => {
