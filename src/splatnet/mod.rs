@@ -1,10 +1,14 @@
+use chrono::{Duration, DurationRound, Local, Utc};
 use derivative::Derivative;
 use futures::{future::join_all, Future, FutureExt};
 use serde::{Deserialize, Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
-use std::{pin::Pin, sync::Arc, time::Duration};
+use std::{pin::Pin, sync::Arc};
 use strum_macros::EnumIter;
-use tokio::sync::RwLock;
+use tokio::{
+  sync::RwLock,
+  time::{sleep_until, Instant},
+};
 use tokio_stream::{wrappers::IntervalStream, StreamExt};
 
 use crate::{action::ActionManager, BoxError};
@@ -92,66 +96,104 @@ impl SplatNetAgent {
   pub fn new(actions: ActionManager, config: SplatNetConfig) -> Arc<Self> {
     Arc::new(SplatNetAgent {
       actions,
-      gear_update_interval: chrono::Duration::minutes(config.update_interval_mins.gears)
-        .to_std()
-        .unwrap(),
-      schedules_update_interval: chrono::Duration::minutes(config.update_interval_mins.schedules)
-        .to_std()
-        .unwrap(),
+      gear_update_interval: Duration::minutes(config.update_interval_mins.gears),
+      schedules_update_interval: Duration::minutes(config.update_interval_mins.schedules),
       state: RwLock::new(Spider::new()),
     })
   }
 
   pub async fn watch(self: Arc<Self>) -> Result<(), BoxError> {
-    let update_gear = {
-      let mut timer = IntervalStream::new(tokio::time::interval(self.gear_update_interval));
-      let this = self.clone();
-      async move {
-        while let Some(_) = timer.next().await {
+    let update_gears = self
+      .clone()
+      .poll(self.gear_update_interval, Duration::hours(2), |this| {
+        Box::pin(async move {
           match this.state.write().await.update_gear().await {
             Ok(gears) => {
-              log::info!("gears += {}", gears.len());
-              this
-                .handle_gear_update(gears)
-                .await
-                .unwrap_or_else(|err| this.handle_error(err))
+              if gears.is_empty() {
+                false
+              } else {
+                log::info!("gears += {}", gears.len());
+                this
+                  .handle_gear_update(gears)
+                  .await
+                  .unwrap_or_else(|err| this.handle_error(err));
+                true
+              }
             }
             Err(err) => {
               log::warn!("update gears failed: [{:?}]", err);
+              false
             }
           }
-        }
-      }
-    };
-    let update_schedules = {
-      let mut timer = IntervalStream::new(tokio::time::interval(self.schedules_update_interval));
-      let this = self.clone();
-      async move {
-        while let Some(_) = timer.next().await {
-          match this.state.write().await.update_schedules().await {
-            Ok((pvp, coop)) => {
-              log::info!("pvp += {}, coop += {}", pvp.len(), coop.len());
-              let tasks: [Pin<Box<dyn Future<Output = Result<(), BoxError>> + Send>>; 2] = [
-                Box::pin(this.handle_pvp_update(pvp)),
-                Box::pin(this.handle_coop_update(coop)),
-              ];
-              join_all(tasks)
-                .map(|rets| {
-                  for ret in rets.into_iter() {
-                    ret.unwrap_or_else(|err| this.handle_error(err));
-                  }
-                })
-                .await
+        })
+      });
+    let update_schedules =
+      self
+        .clone()
+        .poll(self.schedules_update_interval, Duration::hours(2), |this| {
+          Box::pin(async move {
+            match this.state.write().await.update_schedules().await {
+              Ok((pvp, coop)) => {
+                if pvp.is_empty() {
+                  false
+                } else {
+                  log::info!("pvp += {}, coop += {}", pvp.len(), coop.len());
+                  let tasks: [Pin<Box<dyn Future<Output = Result<(), BoxError>> + Send>>; 2] = [
+                    Box::pin(this.handle_pvp_update(pvp)),
+                    Box::pin(this.handle_coop_update(coop)),
+                  ];
+                  join_all(tasks)
+                    .map(|rets| {
+                      for ret in rets.into_iter() {
+                        ret.unwrap_or_else(|err| this.handle_error(err));
+                      }
+                    })
+                    .await;
+                  true
+                }
+              }
+              Err(err) => {
+                log::warn!("update schedules failed: [{:?}]", err);
+                false
+              }
             }
-            Err(err) => {
-              log::warn!("update schedules failed: [{:?}]", err);
-            }
-          }
-        }
-      }
-    };
-    futures::join!(update_gear, update_schedules);
+          })
+        });
+    futures::join!(update_gears, update_schedules);
     Ok(())
+  }
+
+  async fn poll(
+    self: Arc<Self>,
+    interval: Duration,
+    rotation: Duration,
+    update: impl Fn(Arc<Self>) -> Pin<Box<dyn Future<Output = bool>>>,
+  ) {
+    let mut tick = Instant::now();
+    loop {
+      sleep_until(tick).await;
+      // content not updated
+      if !update(self.clone()).await {
+        let mut timer = IntervalStream::new(tokio::time::interval(interval.to_std().unwrap()));
+        while let Some(tick1) = timer.next().await {
+          // content updated
+          if update(self.clone()).await {
+            tick = tick1;
+            break;
+          }
+        }
+      }
+      // measure tasks elapsed time
+      let elapsed = Duration::from_std(Instant::now() - tick).unwrap();
+      let fire = Utc::now() - elapsed;
+      let eps = Duration::seconds(5);
+      let next_fire = fire.duration_trunc(rotation).unwrap() + rotation + eps;
+      tick += (next_fire - fire).to_std().unwrap();
+      log::info!(
+        "scheduled next tick at [{}]",
+        next_fire.with_timezone(&Local).to_string()
+      );
+    }
   }
 
   fn handle_error(&self, err: BoxError) {
