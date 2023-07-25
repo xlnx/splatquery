@@ -42,7 +42,8 @@
             <div class="grid grid-cols-2 gap-2 sm:gap-4">
               <div class="flex flex-col"
                 v-for="(hrs, i) in [dayHrsNever.concat(dayHrs.slice(0, 6)), dayHrsNever.concat(dayHrs.slice(6))]">
-                <select v-model="form.dayHrs[day][i]" multiple class="fmt-form-input w-full flex-1">
+                <select v-model="form.dayHrs[day][i]" multiple class="fmt-form-input w-full flex-1"
+                  :disabled="!!submission">
                   <option :value="hr.id" v-for="hr in hrs" :key="hr.id">
                     {{ hr.name }}
                   </option>
