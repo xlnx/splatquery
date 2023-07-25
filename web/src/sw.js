@@ -15,6 +15,10 @@ registerRoute(new Route(({ request }) => request.destination == 'image', new Cac
   ]
 })));
 
+registerRoute(new Route(({ request }) => request.destination == 'font', new CacheFirst({
+  cacheName: 'fonts'
+})));
+
 const isApiUrl = ({ origin, pathname }) => {
   let api = import.meta.env.VITE_API_SERVER;
   if (api.startsWith('/')) {
