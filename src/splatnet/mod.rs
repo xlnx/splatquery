@@ -1,3 +1,4 @@
+use backoff::ExponentialBackoffBuilder;
 use chrono::{Duration, DurationRound, Local, Utc};
 use derivative::Derivative;
 use futures::{future::join_all, Future, FutureExt};
@@ -9,7 +10,6 @@ use tokio::{
   sync::RwLock,
   time::{sleep_until, Instant},
 };
-use tokio_stream::{wrappers::IntervalStream, StreamExt};
 
 use crate::{action::ActionManager, BoxError};
 
@@ -103,69 +103,63 @@ impl SplatNetAgent {
   }
 
   pub async fn watch(self: Arc<Self>) -> Result<(), BoxError> {
-    let update_gears = self
-      .clone()
-      .poll(self.gear_update_interval, Duration::hours(4), |this| {
-        Box::pin(async move {
-          match this.state.write().await.update_gear().await {
-            Ok(gears) => {
-              if gears.is_empty() {
-                false
-              } else {
-                log::info!("gears += {}", gears.len());
-                this
-                  .handle_gear_update(gears)
-                  .await
-                  .unwrap_or_else(|err| this.handle_error(err));
-                true
-              }
-            }
-            Err(err) => {
-              log::warn!("update gears failed: [{:?}]", err);
+    let update_gears = self.clone().poll(Duration::hours(4), |this| {
+      Box::pin(async move {
+        match this.state.write().await.update_gear().await {
+          Ok(gears) => {
+            if gears.is_empty() {
               false
+            } else {
+              log::info!("gears += {}", gears.len());
+              this
+                .handle_gear_update(gears)
+                .await
+                .unwrap_or_else(|err| this.handle_error(err));
+              true
             }
           }
-        })
-      });
-    let update_schedules =
-      self
-        .clone()
-        .poll(self.schedules_update_interval, Duration::hours(2), |this| {
-          Box::pin(async move {
-            match this.state.write().await.update_schedules().await {
-              Ok((pvp, coop)) => {
-                if pvp.is_empty() {
-                  false
-                } else {
-                  log::info!("pvp += {}, coop += {}", pvp.len(), coop.len());
-                  let tasks: [Pin<Box<dyn Future<Output = Result<(), BoxError>> + Send>>; 2] = [
-                    Box::pin(this.handle_pvp_update(pvp)),
-                    Box::pin(this.handle_coop_update(coop)),
-                  ];
-                  join_all(tasks)
-                    .map(|rets| {
-                      for ret in rets.into_iter() {
-                        ret.unwrap_or_else(|err| this.handle_error(err));
-                      }
-                    })
-                    .await;
-                  true
-                }
-              }
-              Err(err) => {
-                log::warn!("update schedules failed: [{:?}]", err);
-                false
-              }
+          Err(err) => {
+            log::warn!("update gears failed: [{:?}]", err);
+            false
+          }
+        }
+      })
+    });
+    let update_schedules = self.clone().poll(Duration::hours(2), |this| {
+      Box::pin(async move {
+        match this.state.write().await.update_schedules().await {
+          Ok((pvp, coop)) => {
+            if pvp.is_empty() {
+              false
+            } else {
+              log::info!("pvp += {}, coop += {}", pvp.len(), coop.len());
+              let tasks: [Pin<Box<dyn Future<Output = Result<(), BoxError>> + Send>>; 2] = [
+                Box::pin(this.handle_pvp_update(pvp)),
+                Box::pin(this.handle_coop_update(coop)),
+              ];
+              join_all(tasks)
+                .map(|rets| {
+                  for ret in rets.into_iter() {
+                    ret.unwrap_or_else(|err| this.handle_error(err));
+                  }
+                })
+                .await;
+              true
             }
-          })
-        });
+          }
+          Err(err) => {
+            log::warn!("update schedules failed: [{:?}]", err);
+            false
+          }
+        }
+      })
+    });
     futures::join!(update_gears, update_schedules);
     Ok(())
   }
 
   async fn poll(
     self: Arc<Self>,
-    interval: Duration,
     rotation: Duration,
     update: impl Fn(Arc<Self>) -> Pin<Box<dyn Future<Output = bool>>>,
   ) {
@@ -174,14 +168,25 @@ impl SplatNetAgent {
       sleep_until(tick).await;
       // content not updated
       if !update(self.clone()).await {
-        let mut timer = IntervalStream::new(tokio::time::interval(interval.to_std().unwrap()));
-        while let Some(tick1) = timer.next().await {
-          // content updated
+        let exp = ExponentialBackoffBuilder::new()
+          .with_initial_interval(Duration::seconds(5).to_std().unwrap())
+          .with_max_interval(Duration::minutes(30).to_std().unwrap())
+          .build();
+        tick = backoff::future::retry(exp, || async {
+          log::info!("retrying update...");
+          let tick = Instant::now();
           if update(self.clone()).await {
-            tick = tick1;
-            break;
+            // content updated
+            Ok(tick)
+          } else {
+            Err(backoff::Error::transient(()))
           }
-        }
+        })
+        .await
+        .unwrap_or_else(|()| {
+          log::warn!("update failed.");
+          Instant::now()
+        });
       }
       // measure tasks elapsed time
       let elapsed = Duration::from_std(Instant::now() - tick).unwrap();
@@ -191,7 +196,7 @@ impl SplatNetAgent {
       tick += (next_fire - fire).to_std().unwrap();
       log::info!(
         "scheduled next tick at [{}]",
-        next_fire.with_timezone(&Local).to_string()
+        next_fire.with_timezone(&Local)
       );
     }
   }

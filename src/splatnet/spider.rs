@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Utc};
 
 use crate::BoxError;
 
@@ -114,29 +114,33 @@ impl Spider {
       });
     };
 
-    if pickup_brand.sale_end_time > self.gear_pickup_brand {
+    let mut t = pickup_brand.sale_end_time;
+    if t > self.gear_pickup_brand {
       // found new pickup brand
-      let t = self.gear_pickup_brand;
-      self.gear_pickup_brand = pickup_brand.sale_end_time;
+      std::mem::swap(&mut self.gear_pickup_brand, &mut t);
       log::debug!(
         "cursor.gear_pickup_brand [{}] -> [{}]",
-        t,
-        self.gear_pickup_brand
+        t.with_timezone(&Local),
+        self.gear_pickup_brand.with_timezone(&Local)
       );
-      for gear in pickup_brand.brand_gears.into_iter() {
-        collect(gear);
+      for g in pickup_brand.brand_gears.into_iter() {
+        collect(g);
       }
     }
 
-    if let Some(gear) = limited_gears.last() {
-      if gear.sale_end_time > self.gear_limited {
+    if let Some(g) = limited_gears.last() {
+      let mut t = g.sale_end_time;
+      if t > self.gear_limited {
         // found new limited gears
-        let t = self.gear_limited;
-        self.gear_limited = gear.sale_end_time;
-        log::debug!("cursor.gear_limited [{}] -> [{}]", t, self.gear_limited);
-        for gear in limited_gears.into_iter() {
-          if gear.sale_end_time > t {
-            collect(gear);
+        std::mem::swap(&mut self.gear_limited, &mut t);
+        log::debug!(
+          "cursor.gear_limited [{}] -> [{}]",
+          t.with_timezone(&Local),
+          self.gear_limited.with_timezone(&Local)
+        );
+        for g in limited_gears.into_iter() {
+          if g.sale_end_time > t {
+            collect(g);
           }
         }
       }
@@ -204,7 +208,11 @@ impl Spider {
       if t > self.pvp_regular {
         // find new turf-war schedule
         std::mem::swap(&mut self.pvp_regular, &mut t);
-        log::debug!("cursor.pvp_regular [{}] -> [{}]", t, self.pvp_regular);
+        log::debug!(
+          "cursor.pvp_regular [{}] -> [{}]",
+          t.with_timezone(&Local),
+          self.pvp_regular.with_timezone(&Local)
+        );
         for s in regular_schedules.nodes.into_iter() {
           if s.time_period.start_time > t {
             if let Some(setting) = s.match_setting.regular_match_setting {
@@ -220,7 +228,11 @@ impl Spider {
       if t > self.pvp_bankara {
         // find new bankara schedule
         std::mem::swap(&mut self.pvp_bankara, &mut t);
-        log::debug!("cursor.pvp_bankara [{}] -> [{}]", t, self.pvp_bankara);
+        log::debug!(
+          "cursor.pvp_bankara [{}] -> [{}]",
+          t.with_timezone(&Local),
+          self.pvp_bankara.with_timezone(&Local)
+        );
         for s in bankara_schedules.nodes.into_iter() {
           if s.time_period.start_time > t {
             if let Some((challenge, open)) = s.match_setting.bankara_match_settings {
@@ -237,7 +249,11 @@ impl Spider {
       if t > self.pvp_x_match {
         // find new x match schedule
         std::mem::swap(&mut self.pvp_x_match, &mut t);
-        log::debug!("cursor.pvp_x_match [{}] -> [{}]", t, self.pvp_x_match);
+        log::debug!(
+          "cursor.pvp_x_match [{}] -> [{}]",
+          t.with_timezone(&Local),
+          self.pvp_x_match.with_timezone(&Local)
+        );
         for s in x_schedules.nodes.into_iter() {
           if s.time_period.start_time > t {
             if let Some(setting) = s.match_setting.x_match_setting {
@@ -253,7 +269,11 @@ impl Spider {
       if t > self.pvp_fest {
         // find new x match schedule
         std::mem::swap(&mut self.pvp_fest, &mut t);
-        log::debug!("cursor.pvp_fest [{}] -> [{}]", t, self.pvp_fest);
+        log::debug!(
+          "cursor.pvp_fest [{}] -> [{}]",
+          t.with_timezone(&Local),
+          self.pvp_fest.with_timezone(&Local)
+        );
         for s in fest_schedules.nodes.into_iter() {
           if s.time_period.start_time > t {
             if let Some(setting) = s.match_setting.fest_match_setting {
@@ -269,7 +289,11 @@ impl Spider {
       if t > self.coop_normal {
         // find new coop schedule
         std::mem::swap(&mut self.coop_normal, &mut t);
-        log::debug!("cursor.coop_normal [{}] -> [{}]", t, self.coop_normal);
+        log::debug!(
+          "cursor.coop_normal [{}] -> [{}]",
+          t.with_timezone(&Local),
+          self.coop_normal.with_timezone(&Local)
+        );
         for s in coop_grouping_schedule.regular_schedules.nodes.into_iter() {
           if s.time_period.start_time > t {
             collect_coop(s);
