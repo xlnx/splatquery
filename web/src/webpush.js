@@ -1,3 +1,5 @@
+import { registerSW } from 'virtual:pwa-register'
+
 const tryGetSubInfo = async () => {
   try {
     const registration = await navigator.serviceWorker.getRegistration();
@@ -23,7 +25,8 @@ const getSubInfo = async () => {
   }
   let registration = null;
   try {
-    registration = await serviceWorker.register('/sw.js', { scope: '/', type: 'module' });
+    await registerSW()();
+    registration = await serviceWorker.getRegistration();
     if (!registration) { throw null; }
   } catch (err) {
     throw 'Register service worker failed, please contact the developer for help.'
