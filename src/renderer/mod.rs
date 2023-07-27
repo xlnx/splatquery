@@ -90,6 +90,7 @@ impl Renderer {
   }
 
   pub fn render_pvp(&self, item: &PvpSpiderItem, opts: &RenderOptions) -> Result<String, BoxError> {
+    let locale = opts.language.locale();
     self.render(
       &format!("pvp.{}", opts.platform),
       || {
@@ -99,13 +100,15 @@ impl Renderer {
           .map(|s| base64::encode(format!("VsStage-{}", s)))
           .collect();
         context!(
-          mode => item.mode.to_string(),
-          rule => item.rule.to_string(),
+          mode_img_url => item.mode.img_url(),
+          rule_img_url => item.rule.img_url(),
+          rule => item.rule.name(locale),
           stages => stages,
           start_time => &fmt_time_range_2h(item.start_time, opts.time_zone),
         )
       },
       &[
+        &opts.language.to_string(),
         &opts.time_zone.to_string(),
         &item.mode.to_string(),
         &item.start_time.day().to_string(),
@@ -170,10 +173,9 @@ where
     TimeZone::Pt | TimeZone::Cet => {
       // let et = st.add(chrono::Duration::hours(2));
       let (st0, st1) = st.hour12();
-      let (et0, et1) = (st + chrono::Duration::hours(2)).hour12();
-      let [st0, et0] = [st0, et0].map(|t| ["AM", "PM"][t as usize]);
+      let st0 = ["AM", "PM"][st0 as usize];
       format!(
-        "{mo}/{md}. {st1} {st0} - {et1} {et0} {tz}",
+        "{mo}/{md}. {st1} {st0} - {tz}",
         tz = tz.to_string().to_uppercase(),
       )
     }
@@ -182,11 +184,11 @@ where
       let et1 = st1 + 2;
       if tz == TimeZone::Jst {
         format!(
-          "{mo}/{md}({wd}) {st1}:00 - {et1}:00",
+          "{mo}/{md}({wd}) {st1}:00 - ",
           wd = ["月", "水", "火", "木", "金", "土", "日"][st.weekday() as usize]
         )
       } else {
-        format!("{mo}/{md} {st1}:00 - {et1}:00")
+        format!("{mo}/{md} {st1}:00 - ")
       }
     }
   }

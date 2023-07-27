@@ -1,0 +1,28 @@
+{
+  "modes": {
+    "regular": {
+      "title": "Regular Battle",
+      "name": "Regular"
+    },
+    "challenge": {
+      "title": "Anarchy Battle (Series)",
+      "name": "Series"
+    },
+    "open": {
+      "title": "Anarchy Battle (Open)",
+      "name": "Open"
+    },
+    "x": {
+      "title": "X Battle",
+      "name": "X"
+    },
+    "fest": {
+      "title": "Splatfest Battle",
+      "name": "Splatfest"
+    },
+    "event": {
+      "title": "Challenges",
+      "name": "Challenges"
+    }
+  }
+}

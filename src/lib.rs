@@ -9,8 +9,9 @@ pub mod database;
 pub mod renderer;
 pub mod splatnet;
 
-pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
+rust_i18n::i18n!("locales", fallback = "en-US");
 
+pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(thiserror::Error, Debug)]

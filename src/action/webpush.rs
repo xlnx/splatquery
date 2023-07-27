@@ -3,6 +3,7 @@ use std::{fs::File, str::FromStr, sync::Arc};
 use async_trait::async_trait;
 use chrono::Utc;
 use r2d2_sqlite::rusqlite::{Connection, Transaction};
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use web_push::{
@@ -13,10 +14,7 @@ use web_push::{
 use crate::{
   database::{action::CreateAction, Database, Language, TimeZone},
   renderer::RenderOptions,
-  splatnet::{
-    i18n::{EnUs, I18N},
-    Message,
-  },
+  splatnet::Message,
   Error, Result,
 };
 
@@ -105,13 +103,19 @@ impl ActionAgent for WebPushActionAgent {
       } = ua;
       match msg.as_ref() {
         Message::Pvp(item) => {
-          let i18n = EnUs();
-          let mode = i18n.get_pvp_mode_name(item.mode);
-          let rule = i18n.get_pvp_rule_name(item.rule);
+          let locale = language.locale();
+          let mode = item.mode.name(locale);
+          let rule = item.rule.name(locale);
           let stages: Vec<_> = item
             .stages
             .iter()
-            .map(|id| i18n.get_pvp_stage_name(*id))
+            .map(|id| {
+              let stage_b64 = base64::encode(format!("VsStage-{}", id));
+              t!(
+                format!("splatnet.stages.{}.name", stage_b64).as_str(),
+                locale = locale
+              )
+            })
             .collect();
           let title = format!("{} - {}", rule, mode);
           let body = format!("[{}] & [{}]", stages[0], stages[1]);
@@ -134,7 +138,8 @@ impl ActionAgent for WebPushActionAgent {
             "options": {
               "body": body,
               "image": format!("{}/{}", ctx.image_url, img_path),
-              "icon": "https://splatquery.koishi.top/logo.svg",
+              // FIXME: don't hardcode domain
+              "icon": format!("https://splatquery.koishi.top/{}", item.mode.img_url()),
               "silent": true,
               "tag": tag,
               "timestamp": item.start_time.timestamp_millis(),

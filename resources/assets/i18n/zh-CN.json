@@ -1,0 +1,28 @@
+{
+  "modes": {
+    "regular": {
+      "title": "一般比赛",
+      "name": "涂地"
+    },
+    "challenge": {
+      "title": "蛮颓比赛（挑战）",
+      "name": "挑战"
+    },
+    "open": {
+      "title": "蛮颓比赛（开放）",
+      "name": "开放"
+    },
+    "x": {
+      "title": "X比赛",
+      "name": "X"
+    },
+    "fest": {
+      "title": "祭典比赛",
+      "name": "祭典"
+    },
+    "event": {
+      "title": "活动比赛",
+      "name": "活动"
+    }
+  }
+}

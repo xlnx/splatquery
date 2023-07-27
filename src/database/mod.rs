@@ -20,6 +20,18 @@ pub mod user;
 #[serde(rename_all = "lowercase")]
 pub enum Language {
   EnUs,
+  ZhCn,
+  JaJp,
+}
+
+impl Language {
+  pub fn locale(self) -> &'static str {
+    match self {
+      Self::EnUs => "en-US",
+      Self::ZhCn => "zh-CN",
+      Self::JaJp => "ja-JP",
+    }
+  }
 }
 
 #[derive(

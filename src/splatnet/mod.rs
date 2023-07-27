@@ -2,6 +2,7 @@ use backoff::ExponentialBackoffBuilder;
 use chrono::{Duration, DurationRound, Local, Utc};
 use derivative::Derivative;
 use futures::{future::join_all, Future, FutureExt};
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use serde_enum_str::{Deserialize_enum_str, Serialize_enum_str};
 use std::{pin::Pin, sync::Arc};
@@ -17,7 +18,6 @@ use self::spider::Spider;
 pub use self::spider::{CoopSpiderItem, GearSpiderItem, PvpSpiderItem};
 
 mod gear;
-pub mod i18n;
 mod iso8601;
 mod schedules;
 mod spider;
@@ -36,6 +36,23 @@ pub enum PvpMode {
   Event = 32,
 }
 
+impl PvpMode {
+  pub fn title(self, locale: &str) -> String {
+    t!(format!("modes.{}.title", self).as_str(), locale = locale)
+  }
+
+  pub fn name(self, locale: &str) -> String {
+    t!(format!("modes.{}.name", self).as_str(), locale = locale)
+  }
+
+  pub fn img_url(self) -> String {
+    match self {
+      Self::Challenge | Self::Open => "img/mode/bankara.svg".into(),
+      _ => format!("img/mode/{}.svg", self),
+    }
+  }
+}
+
 #[derive(
   Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize_enum_str, Deserialize_enum_str, EnumIter,
 )]
@@ -47,6 +64,20 @@ pub enum PvpRule {
   Yagura = 4,
   Hoko = 8,
   Asari = 16,
+}
+
+impl PvpRule {
+  pub fn name(self, locale: &str) -> String {
+    let b64 = base64::encode(format!("VsRule-{}", (self as u32).ilog2()));
+    t!(
+      format!("splatnet.rules.{}.name", b64).as_str(),
+      locale = locale
+    )
+  }
+
+  pub fn img_url(self) -> String {
+    format!("img/rule/{}.svg", self)
+  }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
