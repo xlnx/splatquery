@@ -210,6 +210,16 @@ const languages = [
     name: 'English (US)',
     url: `/img/region/na.svg`
   },
+  {
+    id: 'zhcn',
+    name: 'Chinese (Simplified)',
+    url: `/img/region/cn.svg`
+  },
+  {
+    id: 'jajp',
+    name: 'Japanese',
+    url: `/img/region/jp.svg`
+  },
 ]
 
 const weekdays = [
