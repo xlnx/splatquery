@@ -203,6 +203,14 @@ const vsStages = [
   {
     "name": "Manta Maria",
     "id": 18,
+  },
+  {
+    "name": "Crableg Capital",
+    "id": 19,
+  },
+  {
+    "name": "Shipshape Cargo Co.",
+    "id": 20,
   }
 ].map(({ id, name }) => ({
   id,
