@@ -1,7 +1,7 @@
 import {createProxyMiddleware} from 'http-proxy-middleware';
 
 const apiProxy = createProxyMiddleware({
-  target: "https://api.1.koishi.top:80",
+  target: "https://splatquery.koishi.top:80",
   changeOrigin: true,
   pathRewrite: {
     "^/api": "",
